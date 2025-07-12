@@ -10,5 +10,6 @@ class ItemObserver
     public function creating(Item $item): void
     {
         $item->uuid = Str::uuid();
+        $item->price = $item->price * 100;
     }
 }
