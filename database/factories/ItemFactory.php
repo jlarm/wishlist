@@ -19,7 +19,6 @@ class ItemFactory extends Factory
     public function definition(): array
     {
         return [
-            'uuid' => Str::uuid(),
             'user_id' => User::factory(),
             'name' => fake()->name(),
             'image' => fake()->imageUrl(),
