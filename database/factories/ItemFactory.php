@@ -25,7 +25,7 @@ class ItemFactory extends Factory
             'size' => fake()->word(),
             'color' => fake()->colorName(),
             'link' => fake()->url(),
-            'price' => fake()->numberBetween(1, 100),
+            'price' => fake()->randomNumber(2, 1, 100),
             'store' => fake()->word(),
             'purchased' => fake()->boolean(),
             'purchased_by' => User::factory(),
