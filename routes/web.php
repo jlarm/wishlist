@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
-})->name('home');
+});
 
 Route::middleware('guest')->group(function () {
     Route::livewire('register', 'pages::auth.register')->name('register');
@@ -15,6 +15,9 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+
+    Route::view('home', 'home')->name('home');
+
     Route::post('logout', function () {
         Auth::logout();
         request()->session()->invalidate();
