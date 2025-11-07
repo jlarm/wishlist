@@ -2,51 +2,25 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Requests;
+namespace App\Livewire\Forms;
 
 use Illuminate\Auth\Events\Lockout;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Validate;
+use Livewire\Form;
 
-final class LoginRequest extends FormRequest
+final class LoginForm extends Form
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
-    public function authorize(): bool
-    {
-        return true;
-    }
+    #[Validate(['required', 'email'])]
+    public string $email = '';
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, array<mixed>>
-     */
-    public function rules(): array
-    {
-        return [
-            'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string'],
-        ];
-    }
+    #[Validate(['required', 'string'])]
+    public string $password = '';
 
-    /**
-     * Get custom error messages for validation rules.
-     *
-     * @return array<string, string>
-     */
-    public function messages(): array
-    {
-        return [
-            'email.required' => 'Please enter your email address.',
-            'email.email' => 'Please enter a valid email address.',
-            'password.required' => 'Please enter your password.',
-        ];
-    }
+    public bool $remember = false;
 
     /**
      * Attempt to authenticate the request's credentials.
@@ -55,13 +29,15 @@ final class LoginRequest extends FormRequest
      */
     public function authenticate(): void
     {
+        $this->validate();
+
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        if (! Auth::attempt($this->only('email', 'password'), $this->remember)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => 'These credentials do not match our records.',
+                'email' => __('auth.failed'),
             ]);
         }
 
@@ -79,7 +55,7 @@ final class LoginRequest extends FormRequest
             return;
         }
 
-        event(new Lockout($this));
+        event(new Lockout(request()));
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
@@ -96,6 +72,6 @@ final class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->email).'|'.request()->ip());
     }
 }
