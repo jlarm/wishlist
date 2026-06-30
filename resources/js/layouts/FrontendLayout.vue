@@ -53,7 +53,7 @@ const navLink =
                         <TreePine class="size-5" />
                     </span>
                     <span
-                        class="font-display text-xl leading-none font-semibold tracking-tight"
+                        class="font-display text-xl leading-none font-semibold tracking-tight text-white"
                     >
                         Wishlist
                     </span>
