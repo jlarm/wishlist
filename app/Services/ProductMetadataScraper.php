@@ -120,6 +120,7 @@ class ProductMetadataScraper
             try {
                 $response = Http::timeout(8)
                     ->connectTimeout(4)
+                    ->retry([300, 1000], throw: false)
                     ->withHeaders([
                         'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
                         'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -159,12 +160,15 @@ class ProductMetadataScraper
     private function fetchViaProxy(string $url): ?string
     {
         try {
-            $response = Http::timeout(40)->get('https://app.scrapingbee.com/api/v1/', [
-                'api_key' => $this->proxyKey(),
-                'url' => $url,
-                'render_js' => config('services.scrapingbee.render_js') ? 'true' : 'false',
-                'premium_proxy' => config('services.scrapingbee.premium_proxy') ? 'true' : 'false',
-            ]);
+            $response = Http::timeout(40)
+                ->connectTimeout(10)
+                ->retry([1000], throw: false)
+                ->get('https://app.scrapingbee.com/api/v1/', [
+                    'api_key' => $this->proxyKey(),
+                    'url' => $url,
+                    'render_js' => config('services.scrapingbee.render_js') ? 'true' : 'false',
+                    'premium_proxy' => config('services.scrapingbee.premium_proxy') ? 'true' : 'false',
+                ]);
         } catch (\Throwable) {
             return null;
         }
