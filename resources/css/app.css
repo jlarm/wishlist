@@ -1,0 +1,251 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-sans:
+        Instrument Sans, ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+    --font-display:
+        'Fraunces', ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+
+    --color-holly: var(--holly);
+    --color-cranberry: var(--cranberry);
+    --color-gold: var(--gold);
+    --color-pine: var(--pine);
+    --color-frost: var(--frost);
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar-background);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+}
+
+@layer utilities {
+    body,
+    html {
+        --font-sans:
+            'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+            'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+            'Noto Color Emoji';
+    }
+}
+
+/* Snow & candlelight — a warm, cozy evening by the tree. */
+:root {
+    --background: hsl(40 33% 97%);
+    --foreground: hsl(158 35% 12%);
+    --card: hsl(40 44% 99%);
+    --card-foreground: hsl(158 35% 12%);
+    --popover: hsl(40 44% 99%);
+    --popover-foreground: hsl(158 35% 12%);
+    --primary: hsl(150 50% 23%);
+    --primary-foreground: hsl(40 44% 98%);
+    --secondary: hsl(150 18% 92%);
+    --secondary-foreground: hsl(150 40% 18%);
+    --muted: hsl(40 24% 93%);
+    --muted-foreground: hsl(150 10% 38%);
+    --accent: hsl(45 52% 91%);
+    --accent-foreground: hsl(158 35% 14%);
+    --destructive: hsl(2 64% 45%);
+    --destructive-foreground: hsl(40 44% 98%);
+    --border: hsl(150 14% 86%);
+    --input: hsl(150 14% 84%);
+    --ring: hsl(150 50% 30%);
+    --chart-1: hsl(150 50% 30%);
+    --chart-2: hsl(2 62% 48%);
+    --chart-3: hsl(38 58% 50%);
+    --chart-4: hsl(190 35% 45%);
+    --chart-5: hsl(280 30% 50%);
+    --radius: 0.75rem;
+
+    /* Festive accents */
+    --holly: hsl(150 50% 23%);
+    --cranberry: hsl(2 62% 44%);
+    --gold: hsl(38 58% 48%);
+    --pine: hsl(158 40% 14%);
+    --frost: hsl(190 32% 88%);
+
+    /* The admin sidebar is a rich evergreen rail in both modes. */
+    --sidebar-background: hsl(158 42% 12%);
+    --sidebar-foreground: hsl(40 30% 90%);
+    --sidebar-primary: hsl(38 60% 54%);
+    --sidebar-primary-foreground: hsl(158 42% 10%);
+    --sidebar-accent: hsl(158 34% 18%);
+    --sidebar-accent-foreground: hsl(40 32% 95%);
+    --sidebar-border: hsl(158 30% 20%);
+    --sidebar-ring: hsl(38 60% 54%);
+    --sidebar: hsl(158 42% 12%);
+}
+
+/* Midnight pine. */
+.dark {
+    --background: hsl(158 32% 7%);
+    --foreground: hsl(40 30% 92%);
+    --card: hsl(158 26% 10%);
+    --card-foreground: hsl(40 30% 92%);
+    --popover: hsl(158 26% 10%);
+    --popover-foreground: hsl(40 30% 92%);
+    --primary: hsl(146 48% 46%);
+    --primary-foreground: hsl(158 42% 8%);
+    --secondary: hsl(158 20% 16%);
+    --secondary-foreground: hsl(40 30% 92%);
+    --muted: hsl(158 18% 15%);
+    --muted-foreground: hsl(150 12% 62%);
+    --accent: hsl(158 22% 16%);
+    --accent-foreground: hsl(40 30% 92%);
+    --destructive: hsl(2 62% 52%);
+    --destructive-foreground: hsl(40 30% 95%);
+    --border: hsl(158 20% 18%);
+    --input: hsl(158 20% 18%);
+    --ring: hsl(146 48% 46%);
+    --chart-1: hsl(146 48% 46%);
+    --chart-2: hsl(2 66% 58%);
+    --chart-3: hsl(40 68% 58%);
+    --chart-4: hsl(190 40% 52%);
+    --chart-5: hsl(280 40% 62%);
+
+    --holly: hsl(146 48% 46%);
+    --cranberry: hsl(2 68% 58%);
+    --gold: hsl(40 70% 60%);
+    --pine: hsl(158 40% 10%);
+    --frost: hsl(190 30% 30%);
+
+    --sidebar-background: hsl(158 40% 9%);
+    --sidebar-foreground: hsl(40 28% 88%);
+    --sidebar-primary: hsl(40 70% 60%);
+    --sidebar-primary-foreground: hsl(158 40% 9%);
+    --sidebar-accent: hsl(158 28% 15%);
+    --sidebar-accent-foreground: hsl(40 28% 92%);
+    --sidebar-border: hsl(158 24% 16%);
+    --sidebar-ring: hsl(40 70% 60%);
+    --sidebar: hsl(158 40% 9%);
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+    h1,
+    h2,
+    h3 {
+        font-family: var(--font-display);
+    }
+}
+
+@layer components {
+    /* A candy-cane ribbon used as the garland under the festive topbar. */
+    .garland-stripe {
+        background-image: repeating-linear-gradient(
+            -45deg,
+            var(--cranberry) 0,
+            var(--cranberry) 10px,
+            transparent 10px,
+            transparent 20px,
+            var(--gold) 20px,
+            var(--gold) 30px,
+            transparent 30px,
+            transparent 40px
+        );
+    }
+
+    /* A deep evergreen night — cozy and dark so the snow reads clearly. */
+    .candlelight {
+        background-color: hsl(158 44% 7%);
+        background-image:
+            radial-gradient(
+                70rem 50rem at 12% -12%,
+                hsl(150 45% 22% / 0.55),
+                transparent 60%
+            ),
+            radial-gradient(
+                62rem 46rem at 102% -4%,
+                hsl(2 55% 32% / 0.45),
+                transparent 55%
+            ),
+            radial-gradient(
+                54rem 42rem at 50% 122%,
+                hsl(40 62% 42% / 0.2),
+                transparent 60%
+            );
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+}
