@@ -32,7 +32,16 @@ class WishlistItemController extends Controller
      */
     public function store(StoreWishlistItemRequest $request): RedirectResponse
     {
-        $request->user()->wishlistItems()->create($request->validated());
+        $item = $request->user()->wishlistItems()->create($request->validated());
+
+        // Seed the price history from the starting price so the chart begins
+        // populating immediately instead of waiting for the second nightly check.
+        if ($item->price !== null) {
+            $item->priceHistories()->create([
+                'price' => $item->price,
+                'recorded_at' => now(),
+            ]);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Item added to your wishlist.')]);
 

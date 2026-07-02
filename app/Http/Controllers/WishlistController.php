@@ -45,15 +45,23 @@ class WishlistController extends Controller
 
         $query = $user->wishlistItems();
 
+        // The chart is a recent-trend sparkline, so only hydrate the last few
+        // months of points instead of the item's entire history — otherwise the
+        // payload grows by one row per item every night, forever.
+        $recentHistory = ['priceHistories' => fn ($query) => $query->where('recorded_at', '>=', now()->subDays(90))];
+
         if ($isOwnWishlist) {
             // The owner sees all of their own items (including hidden ones) but
             // NEVER any purchase data — the relationship is not even loaded.
-            $items = $query->latest()->get();
+            $items = $query
+                ->with($recentHistory)
+                ->latest()
+                ->get();
         } else {
             // Other viewers only see visible items, with purchase data attached.
             $items = $query
                 ->visible()
-                ->with('purchase.purchasedBy')
+                ->with(['purchase.purchasedBy', ...$recentHistory])
                 ->latest()
                 ->get();
         }

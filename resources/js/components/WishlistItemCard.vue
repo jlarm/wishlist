@@ -12,6 +12,7 @@ import { computed, ref } from 'vue';
 import WishlistItemController from '@/actions/App/Http/Controllers/WishlistItemController';
 import WishlistItemPurchaseController from '@/actions/App/Http/Controllers/WishlistItemPurchaseController';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import PriceHistoryChart from '@/components/PriceHistoryChart.vue';
 import PriorityOrnament from '@/components/PriorityOrnament.vue';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -48,6 +49,38 @@ const formattedPrice = computed(() => {
         style: 'currency',
         currency: 'USD',
     }).format(Number(props.item.price));
+});
+
+const priceHistory = computed(() => props.item.price_history ?? []);
+
+const hasPriceHistory = computed(() => priceHistory.value.length >= 2);
+
+/**
+ * The change from the first recorded price to the latest, so we can flag drops
+ * (good news) and rises. Null when there isn't enough history to compare.
+ */
+const priceTrend = computed(() => {
+    if (!hasPriceHistory.value) {
+        return null;
+    }
+
+    const first = Number(priceHistory.value[0].price);
+    const latest = Number(
+        priceHistory.value[priceHistory.value.length - 1].price,
+    );
+    const delta = latest - first;
+
+    if (delta === 0) {
+        return null;
+    }
+
+    return {
+        dropped: delta < 0,
+        amount: new Intl.NumberFormat(undefined, {
+            style: 'currency',
+            currency: 'USD',
+        }).format(Math.abs(delta)),
+    };
 });
 
 const purchasedDate = computed(() => {
@@ -162,6 +195,29 @@ function deleteItem() {
                 >
                     Color: {{ item.color ?? 'Any' }}
                 </span>
+            </div>
+
+            <!-- Nightly price history -->
+            <div
+                v-if="hasPriceHistory"
+                class="rounded-xl bg-muted/50 px-3 py-2"
+            >
+                <div
+                    class="flex items-center justify-between text-xs font-medium text-muted-foreground"
+                >
+                    <span>Price history</span>
+                    <span
+                        v-if="priceTrend"
+                        class="font-semibold"
+                        :class="
+                            priceTrend.dropped ? 'text-holly' : 'text-cranberry'
+                        "
+                    >
+                        {{ priceTrend.dropped ? '▼' : '▲' }}
+                        {{ priceTrend.amount }}
+                    </span>
+                </div>
+                <PriceHistoryChart :history="priceHistory" class="mt-1" />
             </div>
 
             <p v-if="item.description" class="text-sm text-muted-foreground">

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -88,6 +89,16 @@ class WishlistItem extends Model
     public function purchase(): HasOne
     {
         return $this->hasOne(WishlistItemPurchase::class);
+    }
+
+    /**
+     * The recorded price history for the item, oldest first.
+     *
+     * @return HasMany<WishlistItemPriceHistory, $this>
+     */
+    public function priceHistories(): HasMany
+    {
+        return $this->hasMany(WishlistItemPriceHistory::class)->orderBy('recorded_at');
     }
 
     /**

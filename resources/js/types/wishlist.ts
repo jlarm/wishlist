@@ -11,6 +11,11 @@ export type PurchaseInfo = {
     can_unmark: boolean;
 };
 
+export type PricePoint = {
+    price: string;
+    recorded_at: string;
+};
+
 export type WishlistItem = {
     id: number;
     user_id: number;
@@ -27,6 +32,7 @@ export type WishlistItem = {
     priority_weight: number;
     notes: string | null;
     visibility_status: string;
+    price_history?: PricePoint[];
     is_owner: boolean;
     created_at: string | null;
     updated_at: string | null;

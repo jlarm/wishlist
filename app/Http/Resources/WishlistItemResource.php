@@ -44,6 +44,12 @@ class WishlistItemResource extends JsonResource
             'priority_weight' => $this->priority->weight(),
             'notes' => $this->notes,
             'visibility_status' => $this->visibility_status->value,
+            'price_history' => $this->whenLoaded('priceHistories', fn () => $this->priceHistories
+                ->map(fn ($point): array => [
+                    'price' => $point->price,
+                    'recorded_at' => $point->recorded_at->toIso8601String(),
+                ])
+                ->values()),
             'is_owner' => $isOwner,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

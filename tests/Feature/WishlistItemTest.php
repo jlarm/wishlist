@@ -29,6 +29,36 @@ test('user can create a wishlist item with size and color', function () {
     ]);
 });
 
+test('creating an item with a price seeds its price history', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('wishlist-items.store'), [
+        'title' => 'Running Shoes',
+        'price' => 129.99,
+        'priority' => Priority::High->value,
+        'visibility_status' => 'visible',
+    ]);
+
+    $item = WishlistItem::where('user_id', $user->id)->sole();
+
+    expect($item->priceHistories()->count())->toBe(1);
+    expect($item->priceHistories()->first()->price)->toBe('129.99');
+});
+
+test('creating an item without a price seeds no price history', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('wishlist-items.store'), [
+        'title' => 'Surprise me',
+        'priority' => Priority::Medium->value,
+        'visibility_status' => 'visible',
+    ]);
+
+    $item = WishlistItem::where('user_id', $user->id)->sole();
+
+    expect($item->priceHistories()->count())->toBe(0);
+});
+
 test('title is required', function () {
     $user = User::factory()->create();
 
