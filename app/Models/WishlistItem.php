@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $url
  * @property string|null $image_url
  * @property string|null $price
+ * @property string|null $target_price
  * @property string|null $size
  * @property string|null $color
  * @property Priority $priority
@@ -47,6 +48,7 @@ class WishlistItem extends Model
         'url',
         'image_url',
         'price',
+        'target_price',
         'size',
         'color',
         'priority',
@@ -74,6 +76,7 @@ class WishlistItem extends Model
     {
         return [
             'price' => 'decimal:2',
+            'target_price' => 'decimal:2',
             'priority' => Priority::class,
             'visibility_status' => VisibilityStatus::class,
         ];

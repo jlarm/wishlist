@@ -25,6 +25,8 @@ export type WishlistItem = {
     url: string | null;
     image_url: string | null;
     price: string | null;
+    // Owner-only: their personal price-drop alert threshold.
+    target_price?: string | null;
     size: string | null;
     color: string | null;
     priority: string;

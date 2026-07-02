@@ -20,6 +20,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property bool $is_admin
+ * @property bool $notify_price_drops
+ * @property bool $notify_gift_purchases
  * @property CarbonImmutable|null $disabled_at
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -36,6 +38,17 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
+     * The model's default attribute values, mirroring the migration defaults so
+     * an unsaved instance already reflects them.
+     *
+     * @var array<string, bool>
+     */
+    protected $attributes = [
+        'notify_price_drops' => true,
+        'notify_gift_purchases' => true,
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -46,6 +59,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'notify_price_drops' => 'boolean',
+            'notify_gift_purchases' => 'boolean',
             'disabled_at' => 'datetime',
         ];
     }

@@ -62,6 +62,7 @@ class WishlistItemController extends Controller
                 'url' => $wishlistItem->url,
                 'image_url' => $wishlistItem->image_url,
                 'price' => $wishlistItem->price,
+                'target_price' => $wishlistItem->target_price,
                 'size' => $wishlistItem->size,
                 'color' => $wishlistItem->color,
                 'priority' => $wishlistItem->priority->value,

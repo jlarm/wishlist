@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\RecordItemPrice;
 use App\Models\WishlistItem;
+use App\Notifications\WishlistItemPriceDropped;
 use App\Services\ProductMetadataScraper;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -84,7 +85,36 @@ class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        // Capture the prior price before recording so we can detect a target
+        // crossing — RecordItemPrice overwrites the item's headline price.
+        $previousPrice = $this->wishlistItem->price;
+
         $recordPrice($this->wishlistItem, $price);
+
+        $this->notifyOnTargetReached($previousPrice, $price);
+    }
+
+    /**
+     * Email the owner when a freshly recorded price first meets their target.
+     *
+     * The alert fires only on the crossing — when the previous price was above
+     * the target (or there was none) and the new price is at or below it — so a
+     * price that simply stays low doesn't email them every night.
+     */
+    private function notifyOnTargetReached(?string $previousPrice, string $newPrice): void
+    {
+        $target = $this->wishlistItem->target_price;
+
+        if ($target === null) {
+            return;
+        }
+
+        $justCrossed = (float) $newPrice <= (float) $target
+            && ($previousPrice === null || (float) $previousPrice > (float) $target);
+
+        if ($justCrossed) {
+            $this->wishlistItem->user->notify(new WishlistItemPriceDropped($this->wishlistItem, $newPrice));
+        }
     }
 
     /**

@@ -33,6 +33,7 @@ type WishlistItemFormData = {
     url: string;
     image_url: string;
     price: string;
+    target_price: string;
     size: string;
     color: string;
     priority: string;
@@ -55,6 +56,7 @@ const form = useForm<WishlistItemFormData>({
     url: props.initial?.url ?? '',
     image_url: props.initial?.image_url ?? '',
     price: props.initial?.price ?? '',
+    target_price: props.initial?.target_price ?? '',
     size: props.initial?.size ?? '',
     color: props.initial?.color ?? '',
     priority: props.initial?.priority ?? 'medium',
@@ -82,62 +84,64 @@ function fetchMetadata() {
     fetchSuccess.value = null;
     metadata.url = form.url;
 
-    metadata.post(ProductMetadataController.url(), {
-        onSuccess: (response: unknown) => {
-            const data = response as ProductMetadata;
+    metadata
+        .post(ProductMetadataController.url(), {
+            onSuccess: (response: unknown) => {
+                const data = response as ProductMetadata;
 
-            // Only fill empty fields so we never clobber what the user typed.
-            if (data.title && !form.title) {
-                form.title = data.title;
-            }
+                // Only fill empty fields so we never clobber what the user typed.
+                if (data.title && !form.title) {
+                    form.title = data.title;
+                }
 
-            if (data.description && !form.description) {
-                form.description = data.description;
-            }
+                if (data.description && !form.description) {
+                    form.description = data.description;
+                }
 
-            if (data.price && !form.price) {
-                form.price = data.price;
-            }
+                if (data.price && !form.price) {
+                    form.price = data.price;
+                }
 
-            suggestedImages.value = data.images;
+                suggestedImages.value = data.images;
 
-            if (data.images.length > 0 && !form.image_url) {
-                selectImage(data.images[0]);
-            }
+                if (data.images.length > 0 && !form.image_url) {
+                    selectImage(data.images[0]);
+                }
 
-            const foundAnything =
-                data.images.length > 0 ||
-                !!data.title ||
-                !!data.description ||
-                !!data.price;
+                const foundAnything =
+                    data.images.length > 0 ||
+                    !!data.title ||
+                    !!data.description ||
+                    !!data.price;
 
-            if (foundAnything) {
-                fetchSuccess.value = data.images.length
-                    ? 'Pulled in the details. Pick an image below, then tap Done.'
-                    : 'Pulled in the details. Tap Done to review them.';
-            } else {
+                if (foundAnything) {
+                    fetchSuccess.value = data.images.length
+                        ? 'Pulled in the details. Pick an image below, then tap Done.'
+                        : 'Pulled in the details. Tap Done to review them.';
+                } else {
+                    fetchError.value =
+                        "We reached that page but couldn't pull any details — some stores (like Amazon and Walmart) block this. Close this and fill it in yourself.";
+                }
+            },
+            onError: () => {
                 fetchError.value =
-                    "We reached that page but couldn't pull any details — some stores (like Amazon and Walmart) block this. Close this and fill it in yourself.";
-            }
-        },
-        onError: () => {
-            fetchError.value =
-                "That link couldn't be read. Check the URL is correct and try again.";
-        },
-        // Any non-validation failure (server error, blocked, network) — never
-        // leave the user staring at a spinner that resolved into nothing.
-        onHttpException: () => {
-            fetchError.value =
-                "We couldn't read that link just now. You can still fill in the details below.";
-        },
-        onNetworkError: () => {
-            fetchError.value =
-                "Couldn't reach that link. Check your connection and the URL, then try again.";
-        },
-    }).catch(() => {
-        // The handlers above already surfaced a message; useHttp rethrows on
-        // non-422 failures, so swallow it to avoid an unhandled rejection.
-    });
+                    "That link couldn't be read. Check the URL is correct and try again.";
+            },
+            // Any non-validation failure (server error, blocked, network) — never
+            // leave the user staring at a spinner that resolved into nothing.
+            onHttpException: () => {
+                fetchError.value =
+                    "We couldn't read that link just now. You can still fill in the details below.";
+            },
+            onNetworkError: () => {
+                fetchError.value =
+                    "Couldn't reach that link. Check your connection and the URL, then try again.";
+            },
+        })
+        .catch(() => {
+            // The handlers above already surfaced a message; useHttp rethrows on
+            // non-422 failures, so swallow it to avoid an unhandled rejection.
+        });
 }
 
 function selectImage(url: string) {
@@ -169,8 +173,8 @@ function submit() {
             <div>
                 <p class="text-sm font-medium">Have a link to the product?</p>
                 <p class="text-xs text-muted-foreground">
-                    Try to fetch the details automatically, or just fill the form
-                    in yourself.
+                    Try to fetch the details automatically, or just fill the
+                    form in yourself.
                 </p>
             </div>
             <Dialog v-model:open="fetchDialogOpen">
@@ -234,9 +238,7 @@ function submit() {
                             <p class="text-xs text-muted-foreground">
                                 Tap an image to use it.
                             </p>
-                            <div
-                                class="grid grid-cols-3 gap-2 sm:grid-cols-4"
-                            >
+                            <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
                                 <button
                                     v-for="image in suggestedImages"
                                     :key="image"
@@ -329,6 +331,23 @@ function submit() {
                 />
                 <InputError :message="form.errors.price" />
             </div>
+        </div>
+
+        <div class="grid gap-2">
+            <Label for="target_price">Target price</Label>
+            <Input
+                id="target_price"
+                v-model="form.target_price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+            />
+            <p class="text-xs text-muted-foreground">
+                We check the price nightly. Set a target and we'll email you
+                when it drops to or below this amount.
+            </p>
+            <InputError :message="form.errors.target_price" />
         </div>
 
         <div class="grid gap-2">

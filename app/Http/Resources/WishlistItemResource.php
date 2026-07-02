@@ -37,6 +37,9 @@ class WishlistItemResource extends JsonResource
             'url' => $this->url,
             'image_url' => $this->image_url,
             'price' => $this->price,
+            // The target price is a personal alert threshold, shown only to the
+            // owner — gift-givers never see it.
+            'target_price' => $this->when($isOwner, fn () => $this->target_price),
             'size' => $this->size,
             'color' => $this->color,
             'priority' => $this->priority->value,

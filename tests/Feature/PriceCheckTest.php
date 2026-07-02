@@ -3,8 +3,24 @@
 use App\Jobs\CheckWishlistItemPrice;
 use App\Models\User;
 use App\Models\WishlistItem;
+use App\Notifications\WishlistItemPriceDropped;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+
+/**
+ * Fake an HTML product page that advertises the given price.
+ */
+function fakePriceResponse(string $price): void
+{
+    Http::fake([
+        '*' => Http::response(
+            '<html><head><meta property="og:price:amount" content="'.$price.'"></head><body></body></html>',
+            200,
+            ['Content-Type' => 'text/html'],
+        ),
+    ]);
+}
 
 test('the command queues a price check for every item with a url', function () {
     Queue::fake();
@@ -94,6 +110,72 @@ test('the backfill command seeds one point per priced item that has none', funct
     expect($withoutPrice->priceHistories()->count())->toBe(0);
     // Untouched — the command is idempotent and skips items with history.
     expect($alreadyTracked->priceHistories()->count())->toBe(1);
+});
+
+test('the owner is emailed when a price drops to their target', function () {
+    Notification::fake();
+    fakePriceResponse('42.50');
+
+    $owner = User::factory()->create();
+    $item = WishlistItem::factory()->for($owner)->create([
+        'url' => 'https://example.com/product',
+        'price' => 60.00,
+        'target_price' => 50.00,
+    ]);
+
+    CheckWishlistItemPrice::dispatchSync($item);
+
+    Notification::assertSentTo(
+        $owner,
+        function (WishlistItemPriceDropped $notification) use ($item) {
+            return $notification->item->is($item) && $notification->newPrice === '42.50';
+        },
+    );
+});
+
+test('no email is sent when the price was already below the target', function () {
+    Notification::fake();
+    fakePriceResponse('42.50');
+
+    $item = WishlistItem::factory()->create([
+        'url' => 'https://example.com/product',
+        'price' => 40.00,
+        'target_price' => 50.00,
+    ]);
+
+    CheckWishlistItemPrice::dispatchSync($item);
+
+    Notification::assertNothingSent();
+});
+
+test('no email is sent when the new price is still above the target', function () {
+    Notification::fake();
+    fakePriceResponse('42.50');
+
+    $item = WishlistItem::factory()->create([
+        'url' => 'https://example.com/product',
+        'price' => 60.00,
+        'target_price' => 30.00,
+    ]);
+
+    CheckWishlistItemPrice::dispatchSync($item);
+
+    Notification::assertNothingSent();
+});
+
+test('no email is sent when the item has no target price', function () {
+    Notification::fake();
+    fakePriceResponse('42.50');
+
+    $item = WishlistItem::factory()->create([
+        'url' => 'https://example.com/product',
+        'price' => 60.00,
+        'target_price' => null,
+    ]);
+
+    CheckWishlistItemPrice::dispatchSync($item);
+
+    Notification::assertNothingSent();
 });
 
 test('price history is exposed on the wishlist page', function () {

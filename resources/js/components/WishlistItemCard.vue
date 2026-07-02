@@ -6,6 +6,7 @@ import {
     Gift,
     ImageOff,
     Pencil,
+    Target,
     Trash2,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
@@ -49,6 +50,17 @@ const formattedPrice = computed(() => {
         style: 'currency',
         currency: 'USD',
     }).format(Number(props.item.price));
+});
+
+const formattedTarget = computed(() => {
+    if (!props.item.is_owner || !props.item.target_price) {
+        return null;
+    }
+
+    return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: 'USD',
+    }).format(Number(props.item.target_price));
 });
 
 const priceHistory = computed(() => props.item.price_history ?? []);
@@ -194,6 +206,15 @@ function deleteItem() {
                     :class="item.color ? '' : 'text-muted-foreground italic'"
                 >
                     Color: {{ item.color ?? 'Any' }}
+                </span>
+                <!-- Owner-only: the price-drop alert threshold -->
+                <span
+                    v-if="formattedTarget"
+                    class="inline-flex items-center gap-1 rounded-full border border-holly/30 bg-holly/10 px-2 py-0.5 font-medium text-holly"
+                    :title="`We'll email you if the price drops to ${formattedTarget} or below.`"
+                >
+                    <Target class="size-3" />
+                    Target: {{ formattedTarget }}
                 </span>
             </div>
 

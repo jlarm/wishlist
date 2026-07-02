@@ -59,6 +59,34 @@ test('creating an item without a price seeds no price history', function () {
     expect($item->priceHistories()->count())->toBe(0);
 });
 
+test('user can set a target price when creating an item', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('wishlist-items.store'), [
+        'title' => 'Running Shoes',
+        'price' => 129.99,
+        'target_price' => 99.00,
+        'priority' => Priority::High->value,
+        'visibility_status' => 'visible',
+    ])->assertRedirect(route('wishlists.show', $user));
+
+    expect(WishlistItem::where('user_id', $user->id)->sole()->target_price)->toBe('99.00');
+});
+
+test('the owner sees the target price but other viewers never do', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+    WishlistItem::factory()->for($owner)->create(['target_price' => 99.00]);
+
+    $this->actingAs($owner)
+        ->get(route('wishlists.show', $owner))
+        ->assertInertia(fn ($page) => $page->where('items.0.target_price', '99.00'));
+
+    $this->actingAs($viewer)
+        ->get(route('wishlists.show', $owner))
+        ->assertInertia(fn ($page) => $page->missing('items.0.target_price'));
+});
+
 test('title is required', function () {
     $user = User::factory()->create();
 

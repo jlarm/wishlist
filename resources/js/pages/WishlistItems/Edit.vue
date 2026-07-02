@@ -11,6 +11,7 @@ type EditableItem = {
     url: string | null;
     image_url: string | null;
     price: string | null;
+    target_price: string | null;
     size: string | null;
     color: string | null;
     priority: string;
@@ -30,6 +31,7 @@ const initial = {
     url: props.item.url ?? '',
     image_url: props.item.image_url ?? '',
     price: props.item.price ?? '',
+    target_price: props.item.target_price ?? '',
     size: props.item.size ?? '',
     color: props.item.color ?? '',
     priority: props.item.priority,
