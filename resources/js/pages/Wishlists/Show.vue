@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Gift, Globe, Link2, Plus, RotateCw, Search, X } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import {
+    Gift,
+    Globe,
+    LayoutGrid,
+    Link2,
+    Plus,
+    RotateCw,
+    Search,
+    Table as TableIcon,
+    X,
+} from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import WishlistShareController from '@/actions/App/Http/Controllers/WishlistShareController';
 import { Button } from '@/components/ui/button';
@@ -15,6 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import WishlistItemCard from '@/components/WishlistItemCard.vue';
+import WishlistItemTable from '@/components/WishlistItemTable.vue';
 import { create as createItem } from '@/routes/wishlist-items';
 import { show as wishlistShow } from '@/routes/wishlists';
 import type { WishlistItem } from '@/types';
@@ -83,6 +94,20 @@ const sortBy = ref<'priority' | 'newest' | 'price_asc' | 'price_desc'>(
 );
 const priorityFilter = ref<string>('all');
 const tagFilter = ref<string>('all');
+
+// Card vs table layout, remembered across visits.
+type ViewMode = 'cards' | 'table';
+const STORAGE_KEY = 'wishlist_view';
+const view = ref<ViewMode>(
+    (typeof localStorage !== 'undefined' &&
+        (localStorage.getItem(STORAGE_KEY) as ViewMode)) ||
+        'cards',
+);
+watch(view, (mode) => {
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, mode);
+    }
+});
 
 // Every distinct tag across the list, for the filter dropdown.
 const allTags = computed(() => {
@@ -349,19 +374,50 @@ function copyWithFallback(text: string) {
                 <option value="price_asc">Sort: Price (low to high)</option>
                 <option value="price_desc">Sort: Price (high to low)</option>
             </select>
+
+            <!-- Card / table view toggle -->
+            <div
+                class="ml-auto inline-flex rounded-md border border-input p-0.5"
+                role="group"
+                aria-label="View mode"
+            >
+                <Button
+                    type="button"
+                    :variant="view === 'cards' ? 'secondary' : 'ghost'"
+                    size="sm"
+                    aria-label="Card view"
+                    :aria-pressed="view === 'cards'"
+                    @click="view = 'cards'"
+                >
+                    <LayoutGrid class="size-4" />
+                </Button>
+                <Button
+                    type="button"
+                    :variant="view === 'table' ? 'secondary' : 'ghost'"
+                    size="sm"
+                    aria-label="Table view"
+                    :aria-pressed="view === 'table'"
+                    @click="view = 'table'"
+                >
+                    <TableIcon class="size-4" />
+                </Button>
+            </div>
         </div>
 
         <!-- Items -->
-        <div
-            v-if="visibleItems.length"
-            class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-        >
-            <WishlistItemCard
-                v-for="item in visibleItems"
-                :key="item.id"
-                :item="item"
-            />
-        </div>
+        <template v-if="visibleItems.length">
+            <div
+                v-if="view === 'cards'"
+                class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
+                <WishlistItemCard
+                    v-for="item in visibleItems"
+                    :key="item.id"
+                    :item="item"
+                />
+            </div>
+            <WishlistItemTable v-else :items="visibleItems" />
+        </template>
 
         <!-- Empty states -->
         <div
