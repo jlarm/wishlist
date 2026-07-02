@@ -98,7 +98,7 @@ class WishlistItem extends Model
     {
         return Attribute::make(
             get: fn (?string $value): array => $value === null ? [] : (array) json_decode($value, true),
-            set: fn (mixed $value): string => json_encode($this->normalizeTags($value)),
+            set: fn (mixed $value): string => json_encode($this->normalizeTags($value)) ?: '[]',
         );
     }
 
