@@ -11,6 +11,7 @@ import {
     Table as TableIcon,
     X,
 } from '@lucide/vue';
+import { useIntersectionObserver } from '@vueuse/core';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import WishlistShareController from '@/actions/App/Http/Controllers/WishlistShareController';
@@ -170,6 +171,32 @@ const visibleItems = computed(() => {
 
     return result;
 });
+
+// Infinite scroll: the full filtered list lives in memory, so we just grow how
+// many we render as the user nears the bottom, keeping the DOM light.
+const PAGE_SIZE = 24;
+const renderLimit = ref(PAGE_SIZE);
+
+const displayedItems = computed(() =>
+    visibleItems.value.slice(0, renderLimit.value),
+);
+const hasMore = computed(() => renderLimit.value < visibleItems.value.length);
+
+// Restart from the first page whenever the filtered set changes.
+watch([search, sortBy, priorityFilter, tagFilter, hidePurchased], () => {
+    renderLimit.value = PAGE_SIZE;
+});
+
+const loadMoreAnchor = ref<HTMLElement | null>(null);
+useIntersectionObserver(
+    loadMoreAnchor,
+    ([entry]) => {
+        if (entry?.isIntersecting && hasMore.value) {
+            renderLimit.value += PAGE_SIZE;
+        }
+    },
+    { rootMargin: '600px' },
+);
 
 async function copyLink() {
     const url = new URL(
@@ -427,12 +454,20 @@ function copyWithFallback(text: string) {
                 class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
             >
                 <WishlistItemCard
-                    v-for="item in visibleItems"
+                    v-for="item in displayedItems"
                     :key="item.id"
                     :item="item"
                 />
             </div>
-            <WishlistItemTable v-else :items="visibleItems" />
+            <WishlistItemTable v-else :items="displayedItems" />
+
+            <!-- Infinite-scroll trigger -->
+            <div
+                v-if="hasMore"
+                ref="loadMoreAnchor"
+                class="h-1 w-full"
+                aria-hidden="true"
+            />
         </template>
 
         <!-- Empty states -->
