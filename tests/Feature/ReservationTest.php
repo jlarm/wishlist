@@ -29,10 +29,60 @@ test('the claimer can upgrade a reservation to bought', function () {
     ]);
 
     $this->actingAs($claimer)
-        ->patch(route('wishlist-items.purchase.update', $item))
+        ->patch(route('wishlist-items.purchase.update', $item), ['status' => 'purchased'])
         ->assertRedirect();
 
     expect($item->purchase()->sole()->status)->toBe(PurchaseStatus::Purchased);
+});
+
+test('the claimer can mark a bought item as delivered', function () {
+    $owner = User::factory()->create();
+    $claimer = User::factory()->create();
+    $item = WishlistItem::factory()->for($owner)->create();
+    WishlistItemPurchase::factory()->purchased()->create([
+        'wishlist_item_id' => $item->id,
+        'purchased_by_user_id' => $claimer->id,
+    ]);
+
+    $this->actingAs($claimer)
+        ->patch(route('wishlist-items.purchase.update', $item), ['status' => 'delivered'])
+        ->assertRedirect();
+
+    expect($item->purchase()->sole()->status)->toBe(PurchaseStatus::Delivered);
+});
+
+test('an item cannot be marked delivered until it has been bought', function () {
+    $owner = User::factory()->create();
+    $claimer = User::factory()->create();
+    $item = WishlistItem::factory()->for($owner)->create();
+    // Only reserved, not yet bought.
+    WishlistItemPurchase::factory()->create([
+        'wishlist_item_id' => $item->id,
+        'purchased_by_user_id' => $claimer->id,
+    ]);
+
+    $this->actingAs($claimer)
+        ->patch(route('wishlist-items.purchase.update', $item), ['status' => 'delivered'])
+        ->assertStatus(422);
+
+    expect($item->purchase()->sole()->status)->toBe(PurchaseStatus::Reserved);
+});
+
+test('the delivered control appears only once an item is bought', function () {
+    $owner = User::factory()->create();
+    $claimer = User::factory()->create();
+    $item = WishlistItem::factory()->for($owner)->create();
+    WishlistItemPurchase::factory()->purchased()->create([
+        'wishlist_item_id' => $item->id,
+        'purchased_by_user_id' => $claimer->id,
+    ]);
+
+    $this->actingAs($claimer)
+        ->get(route('wishlists.show', $owner))
+        ->assertInertia(fn ($page) => $page
+            ->where('items.0.purchase.status', 'purchased')
+            ->where('items.0.purchase.can_mark_bought', false)
+            ->where('items.0.purchase.can_mark_delivered', true));
 });
 
 test('a different user cannot mark someone else\'s claim as bought', function () {

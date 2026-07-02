@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PurchaseStatus;
 use App\Http\Requests\StorePurchaseRequest;
 use App\Models\WishlistItem;
 use App\Services\PurchaseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class WishlistItemPurchaseController extends Controller
@@ -30,7 +32,9 @@ class WishlistItemPurchaseController extends Controller
     }
 
     /**
-     * Upgrade a reservation to a confirmed purchase. Only the claimer may do so.
+     * Advance a claim to a later stage — bought, then delivered. Only the
+     * claimer may do so, and only one step forward at a time: an item can be
+     * marked delivered only once it has been marked bought.
      */
     public function update(Request $request, WishlistItem $wishlistItem): RedirectResponse
     {
@@ -38,9 +42,25 @@ class WishlistItemPurchaseController extends Controller
 
         abort_unless($claim->purchased_by_user_id === $request->user()->id, 403);
 
-        $this->purchases->markBought($claim);
+        $validated = $request->validate([
+            'status' => ['required', Rule::in([PurchaseStatus::Purchased->value, PurchaseStatus::Delivered->value])],
+        ]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Marked as bought.')]);
+        $target = PurchaseStatus::from($validated['status']);
+
+        $isValidTransition = match ($target) {
+            PurchaseStatus::Purchased => $claim->status === PurchaseStatus::Reserved,
+            PurchaseStatus::Delivered => $claim->status === PurchaseStatus::Purchased,
+            default => false,
+        };
+
+        abort_unless($isValidTransition, 422);
+
+        $this->purchases->advanceTo($claim, $target);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $target === PurchaseStatus::Delivered
+            ? __('Marked as delivered.')
+            : __('Marked as bought.')]);
 
         return back();
     }

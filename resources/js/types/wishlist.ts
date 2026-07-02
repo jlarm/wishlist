@@ -4,13 +4,14 @@ export type SelectOption = {
 };
 
 export type PurchaseInfo = {
-    status: 'reserved' | 'purchased';
+    status: 'reserved' | 'purchased' | 'delivered';
     purchased_by_name: string | null;
     purchased_at: string | null;
     note: string | null;
     purchased_by_me: boolean;
     can_unmark: boolean;
     can_mark_bought: boolean;
+    can_mark_delivered: boolean;
 };
 
 export type PricePoint = {

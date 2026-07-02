@@ -9,6 +9,7 @@ import {
     Tag,
     Target,
     Trash2,
+    Truck,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import WishlistItemController from '@/actions/App/Http/Controllers/WishlistItemController';
@@ -102,6 +103,17 @@ const purchasedDate = computed(() => {
     return at ? new Date(at).toLocaleDateString() : null;
 });
 
+const claimStatusLabel = computed(() => {
+    switch (props.item.purchase?.status) {
+        case 'delivered':
+            return 'Delivered';
+        case 'purchased':
+            return 'Bought';
+        default:
+            return 'Reserved';
+    }
+});
+
 function reserve() {
     processing.value = true;
     router.post(
@@ -117,11 +129,11 @@ function reserve() {
     );
 }
 
-function markBought() {
+function advanceClaim(status: 'purchased' | 'delivered') {
     processing.value = true;
     router.patch(
         WishlistItemPurchaseController.update(props.item.id).url,
-        {},
+        { status },
         {
             preserveScroll: true,
             onFinish: () => {
@@ -285,10 +297,7 @@ function deleteItem() {
                     class="flex items-center gap-1.5 text-sm font-semibold text-cranberry"
                 >
                     <Check class="size-4" />
-                    {{
-                        item.purchase?.status === 'purchased'
-                            ? 'Bought'
-                            : 'Reserved'
+                    {{ claimStatusLabel
                     }}<template v-if="item.purchase?.purchased_by_name">
                         by {{ item.purchase.purchased_by_name }}</template
                     >
@@ -396,10 +405,20 @@ function deleteItem() {
                         v-if="item.purchase?.can_mark_bought"
                         size="sm"
                         :disabled="processing"
-                        @click="markBought"
+                        @click="advanceClaim('purchased')"
                     >
                         <Check class="size-4" />
                         Mark as bought
+                    </Button>
+
+                    <Button
+                        v-if="item.purchase?.can_mark_delivered"
+                        size="sm"
+                        :disabled="processing"
+                        @click="advanceClaim('delivered')"
+                    >
+                        <Truck class="size-4" />
+                        Mark as delivered
                     </Button>
 
                     <Button

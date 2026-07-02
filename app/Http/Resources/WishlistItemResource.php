@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\PurchaseStatus;
 use App\Models\User;
 use App\Models\WishlistItem;
 use Illuminate\Http\Request;
@@ -88,7 +89,8 @@ class WishlistItemResource extends JsonResource
                 'note' => $this->purchase->note,
                 'purchased_by_me' => $isMine,
                 'can_unmark' => $isMine,
-                'can_mark_bought' => $isMine && ! $this->purchase->isPurchased(),
+                'can_mark_bought' => $isMine && $this->purchase->status === PurchaseStatus::Reserved,
+                'can_mark_delivered' => $isMine && $this->purchase->status === PurchaseStatus::Purchased,
             ] : null;
         }
 

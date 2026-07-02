@@ -14,8 +14,8 @@ class PurchaseService
 {
     /**
      * Reserve a wishlist item for the given user (a soft "I'm planning to get
-     * this" hold). This is the entry point for a claim; it can later be upgraded
-     * to a purchase with {@see markBought()}.
+     * this" hold). This is the entry point for a claim; it can later be advanced
+     * to bought and delivered with {@see advanceTo()}.
      *
      * The unique constraint on wishlist_item_id guarantees a single active claim
      * per item; firstOrCreate avoids a race creating duplicates.
@@ -42,13 +42,14 @@ class PurchaseService
     }
 
     /**
-     * Upgrade an existing claim from a reservation to a confirmed purchase.
+     * Advance a claim to a later lifecycle stage (bought, then delivered).
      *
      * No notification fires — the group was already told when it was reserved.
+     * Transition rules are enforced by the caller.
      */
-    public function markBought(WishlistItemPurchase $claim): void
+    public function advanceTo(WishlistItemPurchase $claim, PurchaseStatus $status): void
     {
-        $claim->update(['status' => PurchaseStatus::Purchased]);
+        $claim->update(['status' => $status]);
     }
 
     /**

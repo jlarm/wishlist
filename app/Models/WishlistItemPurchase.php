@@ -60,14 +60,6 @@ class WishlistItemPurchase extends Model
     }
 
     /**
-     * Whether the claim has been upgraded from a soft reservation to a purchase.
-     */
-    public function isPurchased(): bool
-    {
-        return $this->status === PurchaseStatus::Purchased;
-    }
-
-    /**
      * The wishlist item that was purchased.
      *
      * @return BelongsTo<WishlistItem, $this>

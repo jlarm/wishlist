@@ -6,6 +6,7 @@ enum PurchaseStatus: string
 {
     case Reserved = 'reserved';
     case Purchased = 'purchased';
+    case Delivered = 'delivered';
 
     /**
      * Human readable label for the claim status.
@@ -15,6 +16,7 @@ enum PurchaseStatus: string
         return match ($this) {
             self::Reserved => 'Reserved',
             self::Purchased => 'Bought',
+            self::Delivered => 'Delivered',
         };
     }
 }
