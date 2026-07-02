@@ -56,6 +56,18 @@ class WishlistController extends Controller
                 ->get();
         }
 
+        // Active members, for the header-style switcher that jumps between lists.
+        $people = User::query()
+            ->whereNull('disabled_at')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (User $person): array => [
+                'id' => $person->id,
+                'name' => $person->name,
+                'is_me' => $person->id === $viewer->id,
+            ])
+            ->values();
+
         return Inertia::render('Wishlists/Show', [
             'owner' => [
                 'id' => $user->id,
@@ -65,6 +77,7 @@ class WishlistController extends Controller
                 'share_token' => $isOwnWishlist ? $user->share_token : null,
             ],
             'items' => WishlistItemResource::collection($items)->resolve(),
+            'people' => $people,
         ]);
     }
 }

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
+    Check,
+    ChevronDown,
     Gift,
     Globe,
     LayoutGrid,
@@ -9,6 +11,7 @@ import {
     RotateCw,
     Search,
     Table as TableIcon,
+    Users,
     X,
 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
@@ -24,6 +27,14 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import WishlistItemCard from '@/components/WishlistItemCard.vue';
 import WishlistItemTable from '@/components/WishlistItemTable.vue';
@@ -40,6 +51,7 @@ const props = defineProps<{
         share_token: string | null;
     };
     items: WishlistItem[];
+    people: { id: number; name: string; is_me: boolean }[];
 }>();
 
 const shareProcessing = ref(false);
@@ -252,6 +264,45 @@ function copyWithFallback(text: string) {
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
+                    <!-- Jump straight to anyone else's list -->
+                    <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                            <Button variant="outline">
+                                <Users class="size-4" />
+                                Switch list
+                                <ChevronDown class="size-4 opacity-60" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                            align="end"
+                            class="max-h-80 w-56 overflow-y-auto"
+                        >
+                            <DropdownMenuLabel
+                                >Jump to a list</DropdownMenuLabel
+                            >
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                v-for="person in people"
+                                :key="person.id"
+                                as-child
+                            >
+                                <Link
+                                    :href="wishlistShow(person.id)"
+                                    class="flex w-full cursor-pointer items-center justify-between gap-2"
+                                >
+                                    <span class="truncate">
+                                        {{ person.name
+                                        }}{{ person.is_me ? ' (you)' : '' }}
+                                    </span>
+                                    <Check
+                                        v-if="person.id === owner.id"
+                                        class="size-4 shrink-0"
+                                    />
+                                </Link>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <Button variant="outline" @click="copyLink">
                         <Link2 class="size-4" />
                         Copy link

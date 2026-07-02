@@ -63,9 +63,10 @@ test('owner does not receive purchase metadata anywhere in inertia props', funct
     $response = $this->actingAs($owner)->get(route('wishlists.show', $owner));
 
     // The raw response body (props are serialized into the page) must never
-    // mention the buyer or the purchase note to the owner.
+    // leak purchase data to the owner. The buyer's bare name is fair game —
+    // every member is listed in the "switch list" menu — but the purchase note,
+    // its status, and the purchased_at timestamp must not appear.
     $response->assertDontSee('secret-purchase-note');
-    $response->assertDontSee($buyer->name);
     $response->assertDontSee('"is_purchased"', false);
     $response->assertDontSee('purchased_at', false);
 });

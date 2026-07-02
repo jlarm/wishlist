@@ -125,6 +125,22 @@ test('the owner sees the target price but other viewers never do', function () {
         ->assertInertia(fn ($page) => $page->missing('items.0.target_price'));
 });
 
+test('the wishlist page lists active members for the switcher', function () {
+    $viewer = User::factory()->create(['name' => 'Aaa Viewer']);
+    User::factory()->create(['name' => 'Bbb Other']);
+    User::factory()->create(['name' => 'Zzz Disabled', 'disabled_at' => now()]);
+
+    $this->actingAs($viewer)
+        ->get(route('wishlists.show', $viewer))
+        ->assertInertia(fn ($page) => $page
+            // Disabled members are excluded; the rest are ordered by name.
+            ->has('people', 2)
+            ->where('people.0.name', 'Aaa Viewer')
+            ->where('people.0.is_me', true)
+            ->where('people.1.name', 'Bbb Other')
+            ->where('people.1.is_me', false));
+});
+
 test('title is required', function () {
     $user = User::factory()->create();
 
