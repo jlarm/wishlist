@@ -227,20 +227,22 @@ const claimStatusLabel = computed(() => {
                 v-if="!item.is_owner && item.is_purchased"
                 class="rounded-lg border border-cranberry/30 bg-cranberry/10 px-3 py-2"
             >
-                <p
-                    class="flex items-center gap-1.5 text-sm font-semibold text-cranberry"
+                <div
+                    class="flex items-start gap-1.5 text-sm font-semibold text-cranberry"
                 >
-                    <Check class="size-4" />
-                    {{ claimStatusLabel
-                    }}<template v-if="item.purchase?.purchased_by_name">
-                        by {{ item.purchase.purchased_by_name }}</template
-                    >
-                    <span
-                        v-if="item.purchase?.purchased_by_me"
-                        class="font-normal"
-                        >(you)</span
-                    >
-                </p>
+                    <Check class="mt-0.5 size-4 shrink-0" />
+                    <p>
+                        {{ claimStatusLabel
+                        }}<template v-if="item.purchase?.purchased_by_name">
+                            by
+                            {{ item.purchase.purchased_by_name }}</template
+                        ><span
+                            v-if="item.purchase?.purchased_by_me"
+                            class="font-normal"
+                            >&nbsp;(you)</span
+                        >
+                    </p>
+                </div>
                 <p
                     v-if="item.purchase?.status === 'reserved'"
                     class="mt-0.5 text-xs text-muted-foreground"
