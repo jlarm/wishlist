@@ -4,8 +4,72 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "99dcd0eaaa113ee45a5ae806be736863",
+    "content-hash": "fe6a48d56aec493114f061937ebe044e",
     "packages": [
+        {
+            "name": "armp/error-tracker",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/jlarm/error-tracker.git",
+                "reference": "690f329834b44ec2eea3580da1166e00b2797bca"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/jlarm/error-tracker/zipball/690f329834b44ec2eea3580da1166e00b2797bca",
+                "reference": "690f329834b44ec2eea3580da1166e00b2797bca",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^11.0|^12.0|^13.0",
+                "illuminate/http": "^11.0|^12.0|^13.0",
+                "illuminate/support": "^11.0|^12.0|^13.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^9.0|^10.0",
+                "pestphp/pest": "^3.0",
+                "pestphp/pest-plugin-laravel": "^3.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Armp\\ErrorTracker\\ErrorTrackerServiceProvider"
+                    ],
+                    "aliases": {
+                        "ErrorTracker": "Armp\\ErrorTracker\\Facades\\ErrorTracker"
+                    }
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Armp\\ErrorTracker\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Armp\\ErrorTracker\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Laravel SDK that ships exceptions to a self-hosted error-tracking dashboard.",
+            "keywords": [
+                "errors",
+                "exceptions",
+                "laravel",
+                "monitoring",
+                "observability"
+            ],
+            "support": {
+                "source": "https://github.com/jlarm/error-tracker/tree/v1.0.5",
+                "issues": "https://github.com/jlarm/error-tracker/issues"
+            },
+            "time": "2026-06-16T16:18:18+00:00"
+        },
         {
             "name": "bacon/bacon-qr-code",
             "version": "v3.1.1",
@@ -11325,7 +11389,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "armp/error-tracker": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
