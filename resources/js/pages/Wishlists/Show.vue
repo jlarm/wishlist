@@ -123,7 +123,7 @@ function copyWithFallback(text: string) {
                     <h1 class="font-display text-3xl font-semibold sm:text-4xl">
                         {{
                             owner.is_me
-                                ? 'Dear Santa…'
+                                ? 'My wishlist'
                                 : `${owner.name}'s wishes`
                         }}
                     </h1>
