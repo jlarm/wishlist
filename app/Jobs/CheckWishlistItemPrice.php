@@ -26,6 +26,14 @@ class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
     public int $backoff = 60;
 
     /**
+     * The maximum seconds the job may run. The scraper's ScrapingBee fallback
+     * can legitimately take ~80s, so allow headroom above that — but keep this
+     * below the queue's retry_after (180s) so a slow job is never released and
+     * run a second time.
+     */
+    public int $timeout = 120;
+
+    /**
      * The number of seconds the unique lock is held before it auto-expires, so
      * a crashed worker can never leave an item permanently un-checkable.
      */

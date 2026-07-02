@@ -43,6 +43,10 @@ class WishlistController extends Controller
         $viewer = $request->user();
         $isOwnWishlist = $viewer->id === $user->id;
 
+        // Disabled members are hidden from the directory and dashboard; keep
+        // their wishlist unreachable by direct URL too.
+        abort_if($user->isDisabled(), 404);
+
         $query = $user->wishlistItems();
 
         // The chart is a recent-trend sparkline, so only hydrate the last few

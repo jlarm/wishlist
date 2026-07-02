@@ -136,3 +136,51 @@ test('guests cannot access wishlists', function () {
 
     $this->get(route('wishlists.show', $owner))->assertRedirect(route('login'));
 });
+
+test('a non-owner never sees a hidden item', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+    WishlistItem::factory()->for($owner)->create(['title' => 'Visible Gift']);
+    WishlistItem::factory()->for($owner)->hidden()->create(['title' => 'Secret Gift']);
+
+    $this->actingAs($viewer)
+        ->get(route('wishlists.show', $owner))
+        ->assertOk()
+        ->assertDontSee('Secret Gift')
+        ->assertInertia(fn ($page) => $page->has('items', 1));
+});
+
+test('the owner sees their own hidden items', function () {
+    $owner = User::factory()->create();
+    WishlistItem::factory()->for($owner)->create();
+    WishlistItem::factory()->for($owner)->hidden()->create();
+
+    $this->actingAs($owner)
+        ->get(route('wishlists.show', $owner))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('items', 2));
+});
+
+test('hidden items are excluded from the wishlist directory count', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+    WishlistItem::factory()->for($owner)->create();
+    WishlistItem::factory()->for($owner)->hidden()->create();
+
+    $response = $this->actingAs($viewer)
+        ->get(route('wishlists.index'))
+        ->assertOk();
+
+    $users = collect($response->viewData('page')['props']['users']);
+
+    expect($users->firstWhere('id', $owner->id)['wishlist_items_count'])->toBe(1);
+});
+
+test('a disabled member wishlist is unreachable by direct url', function () {
+    $owner = User::factory()->disabled()->create();
+    $viewer = User::factory()->create();
+
+    $this->actingAs($viewer)
+        ->get(route('wishlists.show', $owner))
+        ->assertNotFound();
+});

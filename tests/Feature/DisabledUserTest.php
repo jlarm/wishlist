@@ -36,3 +36,16 @@ test('a user disabled mid-session is logged out on the next request', function (
         ->get(route('wishlists.index'))
         ->assertRedirect(route('login'));
 });
+
+test('a disabled user cannot reach the settings pages', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get(route('profile.edit'))->assertOk();
+
+    $user->disabled_at = now();
+    $user->save();
+
+    $this->actingAs($user)
+        ->get(route('profile.edit'))
+        ->assertRedirect(route('login'));
+});

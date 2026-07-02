@@ -22,7 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('prices:check')
             ->dailyAt('03:00')
             ->withoutOverlapping()
-            ->onOneServer();
+            ->onOneServer()
+            ->environments(['production']);
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
