@@ -16,7 +16,6 @@ import WishlistItemController from '@/actions/App/Http/Controllers/WishlistItemC
 import WishlistItemPurchaseController from '@/actions/App/Http/Controllers/WishlistItemPurchaseController';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import PriceHistoryChart from '@/components/PriceHistoryChart.vue';
-import PriorityOrnament from '@/components/PriorityOrnament.vue';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import type { WishlistItem } from '@/types';
@@ -164,9 +163,6 @@ function deleteItem() {
     <div
         class="group relative flex flex-col rounded-2xl border-2 border-border bg-card p-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
     >
-        <!-- Hanging bauble showing priority -->
-        <PriorityOrnament :priority="item.priority" />
-
         <!-- Image -->
         <div
             class="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-muted"
