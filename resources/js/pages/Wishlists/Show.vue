@@ -108,8 +108,23 @@ const sortBy = ref<'priority' | 'newest' | 'price_asc' | 'price_desc'>(
 );
 const priorityFilter = ref<string>('all');
 const tagFilter = ref<string>('all');
+const domainFilter = ref<string>('all');
 // Only meaningful on someone else's list — the owner never sees claim state.
 const hidePurchased = ref(false);
+
+// The retailer host for an item's link (e.g. "amazon.com"), or null when it has
+// no (parseable) URL. "www." is stripped so links group under one domain.
+function itemDomain(url: string | null): string | null {
+    if (!url) {
+        return null;
+    }
+
+    try {
+        return new URL(url).hostname.replace(/^www\./, '');
+    } catch {
+        return null;
+    }
+}
 
 // Card vs table layout, remembered across visits.
 type ViewMode = 'cards' | 'table';
@@ -131,6 +146,20 @@ const allTags = computed(() => {
     props.items.forEach((item) => item.tags.forEach((tag) => tags.add(tag)));
 
     return [...tags].sort((a, b) => a.localeCompare(b));
+});
+
+// Every distinct retailer domain across the list, for the filter dropdown.
+const allDomains = computed(() => {
+    const domains = new Set<string>();
+    props.items.forEach((item) => {
+        const domain = itemDomain(item.url);
+
+        if (domain) {
+            domains.add(domain);
+        }
+    });
+
+    return [...domains].sort((a, b) => a.localeCompare(b));
 });
 
 const selectClass =
@@ -158,6 +187,12 @@ const visibleItems = computed(() => {
 
     if (tagFilter.value !== 'all') {
         result = result.filter((item) => item.tags.includes(tagFilter.value));
+    }
+
+    if (domainFilter.value !== 'all') {
+        result = result.filter(
+            (item) => itemDomain(item.url) === domainFilter.value,
+        );
     }
 
     if (!props.owner.is_me && hidePurchased.value) {
@@ -193,7 +228,10 @@ const {
     reset: resetWindow,
 } = useWindowedList(visibleItems);
 
-watch([search, sortBy, priorityFilter, tagFilter, hidePurchased], resetWindow);
+watch(
+    [search, sortBy, priorityFilter, tagFilter, domainFilter, hidePurchased],
+    resetWindow,
+);
 
 async function copyLink() {
     const url = new URL(
@@ -436,6 +474,21 @@ function copyWithFallback(text: string) {
                 <option value="all">All tags</option>
                 <option v-for="tag in allTags" :key="tag" :value="tag">
                     {{ tag }}
+                </option>
+            </select>
+            <select
+                v-if="allDomains.length"
+                v-model="domainFilter"
+                :class="selectClass"
+                aria-label="Filter by store"
+            >
+                <option value="all">All stores</option>
+                <option
+                    v-for="domain in allDomains"
+                    :key="domain"
+                    :value="domain"
+                >
+                    {{ domain }}
                 </option>
             </select>
             <select v-model="sortBy" :class="selectClass" aria-label="Sort by">
