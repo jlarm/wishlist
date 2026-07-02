@@ -1,15 +1,32 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { Gift, TreePine } from '@lucide/vue';
+import { Gift, LayoutGrid, Table as TableIcon, TreePine } from '@lucide/vue';
+import { ref, watch } from 'vue';
 import Snowfall from '@/components/Snowfall.vue';
+import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/sonner';
 import WishlistItemCard from '@/components/WishlistItemCard.vue';
+import WishlistItemTable from '@/components/WishlistItemTable.vue';
 import type { WishlistItem } from '@/types';
 
 defineProps<{
     owner: { name: string };
     items: WishlistItem[];
 }>();
+
+// Card vs table layout, sharing the same remembered preference as the app.
+type ViewMode = 'cards' | 'table';
+const STORAGE_KEY = 'wishlist_view';
+const view = ref<ViewMode>(
+    (typeof localStorage !== 'undefined' &&
+        (localStorage.getItem(STORAGE_KEY) as ViewMode)) ||
+        'cards',
+);
+watch(view, (mode) => {
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, mode);
+    }
+});
 </script>
 
 <template>
@@ -57,16 +74,49 @@ defineProps<{
                 </p>
             </div>
 
-            <div
-                v-if="items.length"
-                class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-            >
-                <WishlistItemCard
-                    v-for="item in items"
-                    :key="item.id"
-                    :item="item"
-                />
-            </div>
+            <template v-if="items.length">
+                <!-- Card / table view toggle -->
+                <div class="mt-6 flex justify-end">
+                    <div
+                        class="inline-flex rounded-md border border-input p-0.5"
+                        role="group"
+                        aria-label="View mode"
+                    >
+                        <Button
+                            type="button"
+                            :variant="view === 'cards' ? 'secondary' : 'ghost'"
+                            size="sm"
+                            aria-label="Card view"
+                            :aria-pressed="view === 'cards'"
+                            @click="view = 'cards'"
+                        >
+                            <LayoutGrid class="size-4" />
+                        </Button>
+                        <Button
+                            type="button"
+                            :variant="view === 'table' ? 'secondary' : 'ghost'"
+                            size="sm"
+                            aria-label="Table view"
+                            :aria-pressed="view === 'table'"
+                            @click="view = 'table'"
+                        >
+                            <TableIcon class="size-4" />
+                        </Button>
+                    </div>
+                </div>
+
+                <div
+                    v-if="view === 'cards'"
+                    class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                >
+                    <WishlistItemCard
+                        v-for="item in items"
+                        :key="item.id"
+                        :item="item"
+                    />
+                </div>
+                <WishlistItemTable v-else :items="items" class="mt-4" />
+            </template>
 
             <div
                 v-else

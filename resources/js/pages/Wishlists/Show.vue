@@ -15,6 +15,7 @@ import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import WishlistShareController from '@/actions/App/Http/Controllers/WishlistShareController';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -94,6 +95,8 @@ const sortBy = ref<'priority' | 'newest' | 'price_asc' | 'price_desc'>(
 );
 const priorityFilter = ref<string>('all');
 const tagFilter = ref<string>('all');
+// Only meaningful on someone else's list — the owner never sees claim state.
+const hidePurchased = ref(false);
 
 // Card vs table layout, remembered across visits.
 type ViewMode = 'cards' | 'table';
@@ -142,6 +145,10 @@ const visibleItems = computed(() => {
 
     if (tagFilter.value !== 'all') {
         result = result.filter((item) => item.tags.includes(tagFilter.value));
+    }
+
+    if (!props.owner.is_me && hidePurchased.value) {
+        result = result.filter((item) => !item.is_purchased);
     }
 
     result.sort((a, b) => {
@@ -374,6 +381,15 @@ function copyWithFallback(text: string) {
                 <option value="price_asc">Sort: Price (low to high)</option>
                 <option value="price_desc">Sort: Price (high to low)</option>
             </select>
+
+            <!-- Hide already-claimed items (never shown on your own list) -->
+            <label
+                v-if="!owner.is_me"
+                class="flex cursor-pointer items-center gap-2 text-sm"
+            >
+                <Checkbox v-model="hidePurchased" />
+                Hide purchased
+            </label>
 
             <!-- Card / table view toggle -->
             <div
