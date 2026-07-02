@@ -13,20 +13,24 @@ use Illuminate\Support\Facades\Notification;
 class PurchaseService
 {
     /**
-     * Reserve a wishlist item for the given user (a soft "I'm planning to get
-     * this" hold). This is the entry point for a claim; it can later be advanced
-     * to bought and delivered with {@see advanceTo()}.
+     * Claim a wishlist item for the given user. Reserving (a soft "I'm planning
+     * to get this" hold) is the default, but a giver can skip straight to a
+     * purchase; either way it can later be advanced with {@see advanceTo()}.
      *
      * The unique constraint on wishlist_item_id guarantees a single active claim
      * per item; firstOrCreate avoids a race creating duplicates.
      */
-    public function reserve(WishlistItem $item, User $claimer, ?string $note = null): WishlistItemPurchase
-    {
+    public function claim(
+        WishlistItem $item,
+        User $claimer,
+        PurchaseStatus $status = PurchaseStatus::Reserved,
+        ?string $note = null,
+    ): WishlistItemPurchase {
         $claim = WishlistItemPurchase::firstOrCreate(
             ['wishlist_item_id' => $item->id],
             [
                 'purchased_by_user_id' => $claimer->id,
-                'status' => PurchaseStatus::Reserved,
+                'status' => $status,
                 'purchased_at' => Carbon::now(),
                 'note' => $note,
             ],

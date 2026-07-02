@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { Check, ExternalLink, Gift, Pencil, Trash2, Truck } from '@lucide/vue';
-import { ref } from 'vue';
+import { ExternalLink, Pencil, Trash2 } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import WishlistItemController from '@/actions/App/Http/Controllers/WishlistItemController';
 import WishlistItemPurchaseController from '@/actions/App/Http/Controllers/WishlistItemPurchaseController';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
@@ -11,10 +11,22 @@ import type { WishlistItem } from '@/types';
 
 const props = defineProps<{
     item: WishlistItem;
+    // Stretch the claim button group to fill the width (used in the card grid).
+    block?: boolean;
 }>();
 
 const purchaseNote = ref('');
 const processing = ref(false);
+
+// Whether a non-owner has any claim action available — used to avoid rendering
+// an empty bordered button group when the item is claimed by someone else.
+const hasClaimActions = computed(
+    () =>
+        (props.item.can.purchase && !props.item.is_purchased) ||
+        props.item.purchase?.can_mark_bought ||
+        props.item.purchase?.can_mark_delivered ||
+        (props.item.is_purchased && props.item.purchase?.can_unmark),
+);
 
 function reserve() {
     processing.value = true;
@@ -26,6 +38,21 @@ function reserve() {
             onFinish: () => {
                 processing.value = false;
                 purchaseNote.value = '';
+            },
+        },
+    );
+}
+
+// Skip the reservation step and claim the item as already bought.
+function buyOutright() {
+    processing.value = true;
+    router.post(
+        WishlistItemPurchaseController.store(props.item.id).url,
+        { status: 'purchased' },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                processing.value = false;
             },
         },
     );
@@ -97,8 +124,14 @@ function deleteItem() {
             </ConfirmDialog>
         </template>
 
-        <!-- Non-owner: claim controls -->
-        <template v-else>
+        <!-- Non-owner: claim controls, kept together as one button group -->
+        <div
+            v-else-if="hasClaimActions"
+            :class="[
+                'divide-x divide-input overflow-hidden rounded-md border border-input',
+                block ? 'flex w-full [&>*]:flex-1' : 'inline-flex',
+            ]"
+        >
             <ConfirmDialog
                 v-if="item.can.purchase && !item.is_purchased"
                 title="Reserve this gift?"
@@ -108,8 +141,7 @@ function deleteItem() {
                 @confirm="reserve"
             >
                 <template #trigger>
-                    <Button size="sm">
-                        <Gift class="size-4" />
+                    <Button variant="ghost" size="sm" class="rounded-none">
                         Reserve
                     </Button>
                 </template>
@@ -125,23 +157,37 @@ function deleteItem() {
                 </div>
             </ConfirmDialog>
 
+            <!-- Skip reserving and claim it as already bought -->
+            <Button
+                v-if="item.can.purchase && !item.is_purchased"
+                variant="ghost"
+                size="sm"
+                class="rounded-none"
+                :disabled="processing"
+                @click="buyOutright"
+            >
+                Mark as bought
+            </Button>
+
             <Button
                 v-if="item.purchase?.can_mark_bought"
+                variant="ghost"
                 size="sm"
+                class="rounded-none"
                 :disabled="processing"
                 @click="advanceClaim('purchased')"
             >
-                <Check class="size-4" />
                 Mark as bought
             </Button>
 
             <Button
                 v-if="item.purchase?.can_mark_delivered"
+                variant="ghost"
                 size="sm"
+                class="rounded-none"
                 :disabled="processing"
                 @click="advanceClaim('delivered')"
             >
-                <Truck class="size-4" />
                 Mark as delivered
             </Button>
 
@@ -149,11 +195,12 @@ function deleteItem() {
                 v-if="item.is_purchased && item.purchase?.can_unmark"
                 variant="ghost"
                 size="sm"
+                class="rounded-none"
                 :disabled="processing"
                 @click="release"
             >
                 Release
             </Button>
-        </template>
+        </div>
     </div>
 </template>

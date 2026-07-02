@@ -16,7 +16,7 @@ class WishlistItemPurchaseController extends Controller
     public function __construct(private readonly PurchaseService $purchases) {}
 
     /**
-     * Reserve a wishlist item (a soft claim).
+     * Claim a wishlist item — reserved by default, or bought outright.
      */
     public function store(StorePurchaseRequest $request, WishlistItem $wishlistItem): RedirectResponse
     {
@@ -24,9 +24,13 @@ class WishlistItemPurchaseController extends Controller
             return back()->with('toast', ['type' => 'info', 'message' => __('This item has already been claimed.')]);
         }
 
-        $this->purchases->reserve($wishlistItem, $request->user(), $request->validated('note'));
+        $status = PurchaseStatus::tryFrom($request->validated('status') ?? '') ?? PurchaseStatus::Reserved;
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Reserved. The group will know it\'s taken.')]);
+        $this->purchases->claim($wishlistItem, $request->user(), $status, $request->validated('note'));
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $status === PurchaseStatus::Purchased
+            ? __('Marked as bought. The group will know it\'s taken.')
+            : __('Reserved. The group will know it\'s taken.')]);
 
         return back();
     }

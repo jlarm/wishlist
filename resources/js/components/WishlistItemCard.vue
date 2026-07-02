@@ -95,6 +95,18 @@ const claimStatusLabel = computed(() => {
             return 'Reserved';
     }
 });
+
+// Attribute the claimer for reserved/bought ("by name"). A delivered item just
+// reads "Delivered" — the name/"(you)" is dropped as it adds nothing there.
+const claimByline = computed(() => {
+    const name = props.item.purchase?.purchased_by_name;
+
+    if (!name || props.item.purchase?.status === 'delivered') {
+        return '';
+    }
+
+    return ` by ${name}`;
+});
 </script>
 
 <template>
@@ -232,12 +244,12 @@ const claimStatusLabel = computed(() => {
                 >
                     <Check class="mt-0.5 size-4 shrink-0" />
                     <p>
-                        {{ claimStatusLabel
-                        }}<template v-if="item.purchase?.purchased_by_name">
-                            by
-                            {{ item.purchase.purchased_by_name }}</template
-                        ><span
-                            v-if="item.purchase?.purchased_by_me"
+                        {{ claimStatusLabel }}{{ claimByline
+                        }}<span
+                            v-if="
+                                item.purchase?.purchased_by_me &&
+                                item.purchase?.status !== 'delivered'
+                            "
                             class="font-normal"
                             >&nbsp;(you)</span
                         >
@@ -263,7 +275,7 @@ const claimStatusLabel = computed(() => {
                 </p>
             </div>
 
-            <WishlistItemActions :item="item" class="mt-auto pt-2" />
+            <WishlistItemActions :item="item" block class="mt-auto pt-2" />
         </div>
     </div>
 </template>

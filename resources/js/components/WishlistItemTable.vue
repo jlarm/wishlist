@@ -42,6 +42,18 @@ function claimLabel(item: WishlistItem): string {
             return 'Reserved';
     }
 }
+
+// Tooltip attribution for reserved/bought. A delivered item just reads
+// "Delivered" — the claimer's name adds nothing there.
+function claimTooltip(item: WishlistItem): string {
+    const name = item.purchase?.purchased_by_name;
+
+    if (!name || item.purchase?.status === 'delivered') {
+        return claimLabel(item);
+    }
+
+    return `${claimLabel(item)} by ${name}`;
+}
 </script>
 
 <template>
@@ -147,11 +159,7 @@ function claimLabel(item: WishlistItem): string {
                         <span
                             v-if="!item.is_owner && item.is_purchased"
                             class="inline-flex items-center rounded-full border border-cranberry/30 bg-cranberry/10 px-2 py-0.5 text-xs font-semibold text-cranberry"
-                            :title="
-                                item.purchase?.purchased_by_name
-                                    ? `${claimLabel(item)} by ${item.purchase.purchased_by_name}`
-                                    : claimLabel(item)
-                            "
+                            :title="claimTooltip(item)"
                         >
                             {{ claimLabel(item) }}
                         </span>

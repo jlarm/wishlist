@@ -19,6 +19,32 @@ test('claiming an item reserves it rather than marking it bought', function () {
     expect($claim->purchased_by_user_id)->toBe($claimer->id);
 });
 
+test('a giver can claim an item as bought without reserving it first', function () {
+    $owner = User::factory()->create();
+    $buyer = User::factory()->create();
+    $item = WishlistItem::factory()->for($owner)->create();
+
+    $this->actingAs($buyer)
+        ->post(route('wishlist-items.purchase.store', $item), ['status' => 'purchased'])
+        ->assertRedirect();
+
+    $claim = $item->purchase()->sole();
+    expect($claim->status)->toBe(PurchaseStatus::Purchased);
+    expect($claim->purchased_by_user_id)->toBe($buyer->id);
+});
+
+test('an item cannot be claimed straight into the delivered state', function () {
+    $owner = User::factory()->create();
+    $buyer = User::factory()->create();
+    $item = WishlistItem::factory()->for($owner)->create();
+
+    $this->actingAs($buyer)
+        ->post(route('wishlist-items.purchase.store', $item), ['status' => 'delivered'])
+        ->assertSessionHasErrors('status');
+
+    $this->assertDatabaseCount('wishlist_item_purchases', 0);
+});
+
 test('the claimer can upgrade a reservation to bought', function () {
     $owner = User::factory()->create();
     $claimer = User::factory()->create();
