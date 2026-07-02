@@ -11,7 +11,6 @@ import {
     Table as TableIcon,
     X,
 } from '@lucide/vue';
-import { useIntersectionObserver } from '@vueuse/core';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import WishlistShareController from '@/actions/App/Http/Controllers/WishlistShareController';
@@ -28,6 +27,7 @@ import {
 import { Input } from '@/components/ui/input';
 import WishlistItemCard from '@/components/WishlistItemCard.vue';
 import WishlistItemTable from '@/components/WishlistItemTable.vue';
+import { useWindowedList } from '@/composables/useWindowedList';
 import { create as createItem } from '@/routes/wishlist-items';
 import { show as wishlistShow } from '@/routes/wishlists';
 import type { WishlistItem } from '@/types';
@@ -172,31 +172,16 @@ const visibleItems = computed(() => {
     return result;
 });
 
-// Infinite scroll: the full filtered list lives in memory, so we just grow how
-// many we render as the user nears the bottom, keeping the DOM light.
-const PAGE_SIZE = 24;
-const renderLimit = ref(PAGE_SIZE);
+// Infinite scroll over the filtered list, restarting at the top whenever a
+// filter changes (but not when the items prop refreshes after a claim action).
+const {
+    displayed: displayedItems,
+    hasMore,
+    anchor: loadMoreAnchor,
+    reset: resetWindow,
+} = useWindowedList(visibleItems);
 
-const displayedItems = computed(() =>
-    visibleItems.value.slice(0, renderLimit.value),
-);
-const hasMore = computed(() => renderLimit.value < visibleItems.value.length);
-
-// Restart from the first page whenever the filtered set changes.
-watch([search, sortBy, priorityFilter, tagFilter, hidePurchased], () => {
-    renderLimit.value = PAGE_SIZE;
-});
-
-const loadMoreAnchor = ref<HTMLElement | null>(null);
-useIntersectionObserver(
-    loadMoreAnchor,
-    ([entry]) => {
-        if (entry?.isIntersecting && hasMore.value) {
-            renderLimit.value += PAGE_SIZE;
-        }
-    },
-    { rootMargin: '600px' },
-);
+watch([search, sortBy, priorityFilter, tagFilter, hidePurchased], resetWindow);
 
 async function copyLink() {
     const url = new URL(

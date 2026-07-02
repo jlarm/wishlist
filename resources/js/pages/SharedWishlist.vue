@@ -1,18 +1,26 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { Gift, LayoutGrid, Table as TableIcon, TreePine } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { ref, toRef, watch } from 'vue';
 import Snowfall from '@/components/Snowfall.vue';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/sonner';
 import WishlistItemCard from '@/components/WishlistItemCard.vue';
 import WishlistItemTable from '@/components/WishlistItemTable.vue';
+import { useWindowedList } from '@/composables/useWindowedList';
 import type { WishlistItem } from '@/types';
 
-defineProps<{
+const props = defineProps<{
     owner: { name: string };
     items: WishlistItem[];
 }>();
+
+// Infinite scroll — grow the rendered slice as the sentinel nears the viewport.
+const {
+    displayed: displayedItems,
+    hasMore,
+    anchor: loadMoreAnchor,
+} = useWindowedList(toRef(props, 'items'));
 
 // Card vs table layout, sharing the same remembered preference as the app.
 type ViewMode = 'cards' | 'table';
@@ -110,12 +118,24 @@ watch(view, (mode) => {
                     class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                 >
                     <WishlistItemCard
-                        v-for="item in items"
+                        v-for="item in displayedItems"
                         :key="item.id"
                         :item="item"
                     />
                 </div>
-                <WishlistItemTable v-else :items="items" class="mt-4" />
+                <WishlistItemTable
+                    v-else
+                    :items="displayedItems"
+                    class="mt-4"
+                />
+
+                <!-- Infinite-scroll trigger -->
+                <div
+                    v-if="hasMore"
+                    ref="loadMoreAnchor"
+                    class="h-1 w-full"
+                    aria-hidden="true"
+                />
             </template>
 
             <div
