@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\RecordItemPrice;
 use App\Enums\Priority;
 use App\Enums\VisibilityStatus;
 use App\Http\Requests\StoreWishlistItemRequest;
@@ -30,17 +31,14 @@ class WishlistItemController extends Controller
     /**
      * Store a newly created wishlist item.
      */
-    public function store(StoreWishlistItemRequest $request): RedirectResponse
+    public function store(StoreWishlistItemRequest $request, RecordItemPrice $recordPrice): RedirectResponse
     {
         $item = $request->user()->wishlistItems()->create($request->validated());
 
         // Seed the price history from the starting price so the chart begins
         // populating immediately instead of waiting for the second nightly check.
         if ($item->price !== null) {
-            $item->priceHistories()->create([
-                'price' => $item->price,
-                'recorded_at' => now(),
-            ]);
+            $recordPrice($item, $item->price);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Item added to your wishlist.')]);

@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -25,6 +27,18 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureRateLimiters();
+    }
+
+    /**
+     * Configure named rate limiters used by queued jobs.
+     */
+    protected function configureRateLimiters(): void
+    {
+        // Cap outbound product scrapes so the nightly batch stays polite to
+        // retailer sites and bounds ScrapingBee spend. Limited jobs are
+        // released and retried, not dropped.
+        RateLimiter::for('price-checks', fn (): Limit => Limit::perMinute(20));
     }
 
     /**

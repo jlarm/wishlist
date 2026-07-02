@@ -9,6 +9,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
@@ -35,6 +36,25 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+        $this->throttlePasswordResetRoutes();
+    }
+
+    /**
+     * Fortify's password-reset routes ship without throttling and expose no
+     * config hook, so attach an IP-based limiter to them once they exist.
+     * The password broker already caps reset-link emails per address; this
+     * bounds abuse from a single source across addresses.
+     *
+     * Fortify registers its routes during the first "booted" pass, so we defer
+     * one pass further to be sure the named routes are present before mutating.
+     */
+    private function throttlePasswordResetRoutes(): void
+    {
+        $this->app->booted(fn () => $this->app->booted(function (): void {
+            foreach (['password.email', 'password.update'] as $name) {
+                Route::getRoutes()->getByName($name)?->middleware('throttle:password-reset');
+            }
+        }));
     }
 
     /**
@@ -94,5 +114,6 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($throttleKey);
         });
 
+        RateLimiter::for('password-reset', fn (Request $request) => Limit::perMinute(5)->by($request->ip()));
     }
 }

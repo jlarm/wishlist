@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Actions\RecordItemPrice;
 use App\Models\WishlistItem;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -19,19 +20,16 @@ class BackfillWishlistItemPrices extends Command
      * creation date using its current price. Items that already have history are
      * skipped, so the command is safe to run more than once.
      */
-    public function handle(): int
+    public function handle(RecordItemPrice $recordPrice): int
     {
         $seeded = 0;
 
         WishlistItem::query()
             ->whereNotNull('price')
             ->whereDoesntHave('priceHistories')
-            ->chunkById(200, function ($items) use (&$seeded): void {
+            ->chunkById(200, function ($items) use ($recordPrice, &$seeded): void {
                 foreach ($items as $item) {
-                    $item->priceHistories()->create([
-                        'price' => $item->price,
-                        'recorded_at' => $item->created_at ?? now(),
-                    ]);
+                    $recordPrice($item, $item->price, $item->created_at);
                     $seeded++;
                 }
             });

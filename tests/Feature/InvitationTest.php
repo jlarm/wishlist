@@ -22,7 +22,7 @@ test('admin can invite a user', function () {
         'status' => InvitationStatus::Pending->value,
         'invited_by_user_id' => $admin->id,
     ]);
-    Mail::assertSent(InvitationMail::class);
+    Mail::assertQueued(InvitationMail::class);
 });
 
 test('an invite is still saved when the email fails to send', function () {
@@ -155,7 +155,7 @@ test('admin can resend an invite with a fresh token', function () {
         ->assertRedirect(route('admin.invitations.index'));
 
     expect($invitation->fresh()->token_hash)->not->toBe($originalHash);
-    Mail::assertSent(InvitationMail::class);
+    Mail::assertQueued(InvitationMail::class);
 });
 
 test('admin can revoke a pending invite', function () {

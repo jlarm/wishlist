@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\GetWishlistDirectory;
 use App\Http\Resources\WishlistItemResource;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -13,25 +14,10 @@ class WishlistController extends Controller
     /**
      * Show the directory of everyone's wishlists.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, GetWishlistDirectory $directory): Response
     {
-        $viewer = $request->user();
-
-        $users = User::query()
-            ->whereNull('disabled_at')
-            ->withCount(['wishlistItems' => fn ($query) => $query->visible()])
-            ->orderBy('name')
-            ->get()
-            ->map(fn (User $user): array => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'is_admin' => $user->is_admin,
-                'is_me' => $user->id === $viewer->id,
-                'wishlist_items_count' => $user->wishlist_items_count,
-            ]);
-
         return Inertia::render('Wishlists/Index', [
-            'users' => $users,
+            'users' => $directory($request->user()),
         ]);
     }
 

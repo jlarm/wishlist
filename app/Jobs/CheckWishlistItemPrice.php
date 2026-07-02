@@ -2,12 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Actions\RecordItemPrice;
 use App\Models\WishlistItem;
 use App\Services\ProductMetadataScraper;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Date;
+use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -54,13 +55,24 @@ class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
     }
 
     /**
+     * Throttle outbound scrapes across all workers so a large nightly batch
+     * can't hammer retailer sites or burn through ScrapingBee credits at once.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [new RateLimited('price-checks')];
+    }
+
+    /**
      * Scrape the item's product page and record the current price.
      *
      * A price is only recorded when the scraper returns a usable number. When
      * the page is blocked or the price can't be found we leave the history
      * untouched, so the chart shows a gap rather than a wrong value.
      */
-    public function handle(ProductMetadataScraper $scraper): void
+    public function handle(ProductMetadataScraper $scraper, RecordItemPrice $recordPrice): void
     {
         if ($this->wishlistItem->url === null) {
             return;
@@ -72,13 +84,7 @@ class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $this->wishlistItem->priceHistories()->create([
-            'price' => $price,
-            'recorded_at' => Date::now(),
-        ]);
-
-        // Keep the item's headline price in sync with the latest observation.
-        $this->wishlistItem->update(['price' => $price]);
+        $recordPrice($this->wishlistItem, $price);
     }
 
     /**

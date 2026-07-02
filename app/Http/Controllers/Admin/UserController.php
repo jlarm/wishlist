@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,14 +42,9 @@ class UserController extends Controller
     /**
      * Update a user's admin or disabled state.
      */
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
-        $this->authorize('update', $user);
-
-        $validated = $request->validate([
-            'is_admin' => ['sometimes', 'boolean'],
-            'is_disabled' => ['sometimes', 'boolean'],
-        ]);
+        $validated = $request->validated();
 
         if (array_key_exists('is_admin', $validated)) {
             $user->is_admin = $validated['is_admin'];

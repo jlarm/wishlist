@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\GetWishlistDirectory;
 use App\Http\Resources\WishlistItemResource;
-use App\Models\User;
 use App\Models\WishlistItem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +16,7 @@ class DashboardController extends Controller
      * Show the admin dashboard. Regular members manage everything from the
      * front end, so they are sent to their own wishlist instead.
      */
-    public function __invoke(Request $request): Response|RedirectResponse
+    public function __invoke(Request $request, GetWishlistDirectory $directory): Response|RedirectResponse
     {
         $user = $request->user();
 
@@ -24,18 +24,7 @@ class DashboardController extends Controller
             return to_route('wishlists.show', $user);
         }
 
-        $users = User::query()
-            ->whereNull('disabled_at')
-            ->withCount(['wishlistItems' => fn ($query) => $query->visible()])
-            ->orderBy('name')
-            ->get()
-            ->map(fn (User $other): array => [
-                'id' => $other->id,
-                'name' => $other->name,
-                'is_admin' => $other->is_admin,
-                'is_me' => $other->id === $user->id,
-                'wishlist_items_count' => $other->wishlist_items_count,
-            ]);
+        $users = $directory($user);
 
         // The viewer's own items never load purchase data (privacy boundary).
         $myItemsCount = $user->wishlistItems()->count();

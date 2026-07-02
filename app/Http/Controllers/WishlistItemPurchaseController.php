@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StorePurchaseRequest;
 use App\Models\WishlistItem;
 use App\Services\PurchaseService;
 use Illuminate\Http\RedirectResponse;
@@ -15,19 +16,13 @@ class WishlistItemPurchaseController extends Controller
     /**
      * Mark a wishlist item as purchased.
      */
-    public function store(Request $request, WishlistItem $wishlistItem): RedirectResponse
+    public function store(StorePurchaseRequest $request, WishlistItem $wishlistItem): RedirectResponse
     {
-        $this->authorize('purchase', $wishlistItem);
-
-        $validated = $request->validate([
-            'note' => ['nullable', 'string', 'max:1000'],
-        ]);
-
         if ($wishlistItem->purchase()->exists()) {
             return back()->with('toast', ['type' => 'info', 'message' => __('This item was already marked as purchased.')]);
         }
 
-        $this->purchases->markPurchased($wishlistItem, $request->user(), $validated['note'] ?? null);
+        $this->purchases->markPurchased($wishlistItem, $request->user(), $request->validated('note'));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Marked as purchased.')]);
 

@@ -55,6 +55,17 @@ class WishlistItem extends Model
     ];
 
     /**
+     * The model's default attribute values, mirroring the migration defaults so
+     * an unsaved instance already reflects them.
+     *
+     * @var array<string, string>
+     */
+    protected $attributes = [
+        'priority' => Priority::Medium->value,
+        'visibility_status' => VisibilityStatus::Visible->value,
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
