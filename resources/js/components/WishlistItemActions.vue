@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { ExternalLink, Pencil, Trash2 } from '@lucide/vue';
+import { ExternalLink } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import WishlistItemController from '@/actions/App/Http/Controllers/WishlistItemController';
 import WishlistItemPurchaseController from '@/actions/App/Http/Controllers/WishlistItemPurchaseController';
@@ -27,6 +27,12 @@ const hasClaimActions = computed(
         props.item.purchase?.can_mark_delivered ||
         (props.item.is_purchased && props.item.purchase?.can_unmark),
 );
+
+// Shared segmented button-group container. Stretches to full width in the card.
+const groupClass = computed(() => [
+    'divide-x divide-input overflow-hidden rounded-md border border-input',
+    props.block ? 'flex w-full [&>*]:flex-1' : 'inline-flex',
+]);
 
 function reserve() {
     processing.value = true;
@@ -91,7 +97,13 @@ function deleteItem() {
 
 <template>
     <div class="flex flex-wrap items-center gap-2">
-        <Button v-if="item.url" as-child variant="outline" size="sm">
+        <Button
+            v-if="item.url"
+            as-child
+            variant="outline"
+            size="sm"
+            :class="{ 'w-full': block }"
+        >
             <a :href="item.url" target="_blank" rel="noopener noreferrer">
                 <ExternalLink class="size-4" />
                 View
@@ -99,10 +111,18 @@ function deleteItem() {
         </Button>
 
         <!-- Owner controls — never any purchase state -->
-        <template v-if="item.is_owner">
-            <Button v-if="item.can.update" as-child variant="outline" size="sm">
+        <div
+            v-if="item.is_owner && (item.can.update || item.can.delete)"
+            :class="groupClass"
+        >
+            <Button
+                v-if="item.can.update"
+                as-child
+                variant="ghost"
+                size="sm"
+                class="rounded-none"
+            >
                 <Link :href="WishlistItemController.edit(item.id).url">
-                    <Pencil class="size-4" />
                     Edit
                 </Link>
             </Button>
@@ -116,22 +136,15 @@ function deleteItem() {
                 @confirm="deleteItem"
             >
                 <template #trigger>
-                    <Button variant="ghost" size="sm">
-                        <Trash2 class="size-4" />
+                    <Button variant="ghost" size="sm" class="rounded-none">
                         Delete
                     </Button>
                 </template>
             </ConfirmDialog>
-        </template>
+        </div>
 
         <!-- Non-owner: claim controls, kept together as one button group -->
-        <div
-            v-else-if="hasClaimActions"
-            :class="[
-                'divide-x divide-input overflow-hidden rounded-md border border-input',
-                block ? 'flex w-full [&>*]:flex-1' : 'inline-flex',
-            ]"
-        >
+        <div v-else-if="hasClaimActions" :class="groupClass">
             <ConfirmDialog
                 v-if="item.can.purchase && !item.is_purchased"
                 title="Reserve this gift?"
