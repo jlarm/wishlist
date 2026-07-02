@@ -42,9 +42,9 @@ test('both preferences are required booleans', function () {
         ->assertSessionHasErrors(['notify_price_drops', 'notify_gift_purchases']);
 });
 
-test('price-drop emails are suppressed when the owner opts out', function () {
+test('price-drop emails are suppressed when the recipient opts out', function () {
     $item = WishlistItem::factory()->create();
-    $notification = new WishlistItemPriceDropped($item, '10.00');
+    $notification = new WishlistItemPriceDropped($item, '20.00', '10.00');
 
     $optedIn = User::factory()->create(['notify_price_drops' => true]);
     $optedOut = User::factory()->create(['notify_price_drops' => false]);

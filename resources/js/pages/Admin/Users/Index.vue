@@ -4,6 +4,7 @@ import { ShieldOff, ShieldCheck, UserCheck, UserX } from '@lucide/vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { index as usersIndex, update } from '@/routes/admin/users';
 
 type AdminUser = {
@@ -12,6 +13,7 @@ type AdminUser = {
     email: string;
     is_admin: boolean;
     is_disabled: boolean;
+    notify_price_drops: boolean;
     is_me: boolean;
     wishlist_items_count: number;
     created_at: string | null;
@@ -42,6 +44,14 @@ function setAdmin(id: number, isAdmin: boolean) {
         { preserveScroll: true },
     );
 }
+
+function setPriceEmails(id: number, enabled: boolean) {
+    router.patch(
+        update(id).url,
+        { notify_price_drops: enabled },
+        { preserveScroll: true },
+    );
+}
 </script>
 
 <template>
@@ -66,6 +76,7 @@ function setAdmin(id: number, isAdmin: boolean) {
                         <th class="px-4 py-3 font-medium">Role</th>
                         <th class="px-4 py-3 font-medium">Status</th>
                         <th class="px-4 py-3 font-medium">Items</th>
+                        <th class="px-4 py-3 font-medium">Price emails</th>
                         <th class="px-4 py-3 text-right font-medium">
                             Actions
                         </th>
@@ -108,6 +119,17 @@ function setAdmin(id: number, isAdmin: boolean) {
                         </td>
                         <td class="px-4 py-3 text-muted-foreground">
                             {{ user.wishlist_items_count }}
+                        </td>
+                        <td class="px-4 py-3">
+                            <Checkbox
+                                :model-value="user.notify_price_drops"
+                                aria-label="Toggle price-drop emails for this user"
+                                title="Whether this user receives price-drop emails"
+                                @update:model-value="
+                                    (value) =>
+                                        setPriceEmails(user.id, value === true)
+                                "
+                            />
                         </td>
                         <td class="px-4 py-3">
                             <div

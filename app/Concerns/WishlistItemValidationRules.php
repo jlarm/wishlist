@@ -22,7 +22,6 @@ trait WishlistItemValidationRules
             'url' => ['nullable', 'url', 'max:2048'],
             'image_url' => ['nullable', 'url', 'max:2048'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
-            'target_price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'size' => ['nullable', 'string', 'max:100'],
             'color' => ['nullable', 'string', 'max:100'],
             'tags' => ['nullable', 'array', 'max:20'],

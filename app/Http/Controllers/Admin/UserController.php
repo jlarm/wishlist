@@ -29,6 +29,7 @@ class UserController extends Controller
                 'email' => $user->email,
                 'is_admin' => $user->is_admin,
                 'is_disabled' => $user->isDisabled(),
+                'notify_price_drops' => $user->notify_price_drops,
                 'is_me' => $user->id === $request->user()->id,
                 'wishlist_items_count' => $user->wishlist_items_count,
                 'created_at' => $user->created_at?->toIso8601String(),
@@ -52,6 +53,10 @@ class UserController extends Controller
 
         if (array_key_exists('is_disabled', $validated)) {
             $user->disabled_at = $validated['is_disabled'] ? now() : null;
+        }
+
+        if (array_key_exists('notify_price_drops', $validated)) {
+            $user->notify_price_drops = $validated['notify_price_drops'];
         }
 
         $user->save();

@@ -33,7 +33,6 @@ type WishlistItemFormData = {
     url: string;
     image_url: string;
     price: string;
-    target_price: string;
     size: string;
     color: string;
     tags: string[];
@@ -57,7 +56,6 @@ const form = useForm<WishlistItemFormData>({
     url: props.initial?.url ?? '',
     image_url: props.initial?.image_url ?? '',
     price: props.initial?.price ?? '',
-    target_price: props.initial?.target_price ?? '',
     size: props.initial?.size ?? '',
     color: props.initial?.color ?? '',
     tags: props.initial?.tags ? [...props.initial.tags] : [],
@@ -359,23 +357,6 @@ function submit() {
                 />
                 <InputError :message="form.errors.price" />
             </div>
-        </div>
-
-        <div class="grid gap-2">
-            <Label for="target_price">Target price</Label>
-            <Input
-                id="target_price"
-                v-model="form.target_price"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-            />
-            <p class="text-xs text-muted-foreground">
-                We check the price nightly. Set a target and we'll email you
-                when it drops to or below this amount.
-            </p>
-            <InputError :message="form.errors.target_price" />
         </div>
 
         <div class="grid gap-2">

@@ -3,6 +3,7 @@
 use App\Jobs\CheckWishlistItemPrice;
 use App\Models\User;
 use App\Models\WishlistItem;
+use App\Models\WishlistItemPurchase;
 use App\Notifications\WishlistItemPriceDropped;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
@@ -112,35 +113,61 @@ test('the backfill command seeds one point per priced item that has none', funct
     expect($alreadyTracked->priceHistories()->count())->toBe(1);
 });
 
-test('the owner is emailed when a price drops to their target', function () {
+test('a price drop emails the other members but never the owner', function () {
     Notification::fake();
     fakePriceResponse('42.50');
 
     $owner = User::factory()->create();
+    $viewer = User::factory()->create();
     $item = WishlistItem::factory()->for($owner)->create([
         'url' => 'https://example.com/product',
         'price' => 60.00,
-        'target_price' => 50.00,
     ]);
 
     CheckWishlistItemPrice::dispatchSync($item);
 
     Notification::assertSentTo(
-        $owner,
-        function (WishlistItemPriceDropped $notification) use ($item) {
-            return $notification->item->is($item) && $notification->newPrice === '42.50';
-        },
+        $viewer,
+        fn (WishlistItemPriceDropped $notification) => $notification->item->is($item)
+            && $notification->oldPrice === '60.00'
+            && $notification->newPrice === '42.50',
     );
+    Notification::assertNotSentTo($owner, WishlistItemPriceDropped::class);
 });
 
-test('no email is sent when the price was already below the target', function () {
+test('a price drop on a reserved item emails only the person who reserved it', function () {
+    Notification::fake();
+    fakePriceResponse('42.50');
+
+    $owner = User::factory()->create();
+    $claimer = User::factory()->create();
+    $other = User::factory()->create();
+    $item = WishlistItem::factory()->for($owner)->create([
+        'url' => 'https://example.com/product',
+        'price' => 60.00,
+    ]);
+    WishlistItemPurchase::factory()->create([
+        'wishlist_item_id' => $item->id,
+        'purchased_by_user_id' => $claimer->id,
+    ]);
+
+    CheckWishlistItemPrice::dispatchSync($item);
+
+    Notification::assertSentTo($claimer, WishlistItemPriceDropped::class);
+    Notification::assertNotSentTo([$owner, $other], WishlistItemPriceDropped::class);
+});
+
+test('a price drop on an already-bought item emails no one', function () {
     Notification::fake();
     fakePriceResponse('42.50');
 
     $item = WishlistItem::factory()->create([
         'url' => 'https://example.com/product',
-        'price' => 40.00,
-        'target_price' => 50.00,
+        'price' => 60.00,
+    ]);
+    WishlistItemPurchase::factory()->purchased()->create([
+        'wishlist_item_id' => $item->id,
+        'purchased_by_user_id' => User::factory()->create()->id,
     ]);
 
     CheckWishlistItemPrice::dispatchSync($item);
@@ -148,14 +175,14 @@ test('no email is sent when the price was already below the target', function ()
     Notification::assertNothingSent();
 });
 
-test('no email is sent when the new price is still above the target', function () {
+test('no email is sent when the price rises or holds steady', function () {
     Notification::fake();
-    fakePriceResponse('42.50');
+    fakePriceResponse('75.00');
 
+    User::factory()->create();
     $item = WishlistItem::factory()->create([
         'url' => 'https://example.com/product',
         'price' => 60.00,
-        'target_price' => 30.00,
     ]);
 
     CheckWishlistItemPrice::dispatchSync($item);
@@ -163,14 +190,14 @@ test('no email is sent when the new price is still above the target', function (
     Notification::assertNothingSent();
 });
 
-test('no email is sent when the item has no target price', function () {
+test('no email is sent on the very first recorded price', function () {
     Notification::fake();
     fakePriceResponse('42.50');
 
+    User::factory()->create();
     $item = WishlistItem::factory()->create([
         'url' => 'https://example.com/product',
-        'price' => 60.00,
-        'target_price' => null,
+        'price' => null,
     ]);
 
     CheckWishlistItemPrice::dispatchSync($item);

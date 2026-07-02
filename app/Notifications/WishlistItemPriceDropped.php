@@ -15,18 +15,17 @@ class WishlistItemPriceDropped extends Notification implements ShouldQueue
 
     /**
      * Create a new notification instance.
-     *
-     * @param  string  $newPrice  The freshly recorded price that met the target.
      */
     public function __construct(
         public WishlistItem $item,
+        public string $oldPrice,
         public string $newPrice,
     ) {}
 
     /**
      * Get the notification's delivery channels.
      *
-     * Suppressed entirely when the owner has turned off price-drop emails.
+     * Suppressed per-recipient when a member has turned off price-drop emails.
      *
      * @return array<int, string>
      */
@@ -44,18 +43,21 @@ class WishlistItemPriceDropped extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
+        $ownerName = $this->item->user->name;
         $link = $this->item->url ?? route('wishlists.show', $this->item->user_id);
 
         return (new MailMessage)
             ->subject(__('Price drop: :title', ['title' => $this->item->title]))
             ->greeting(__('Good news!'))
-            ->line(__('An item on your wishlist has dropped to your target price.'))
-            ->line(__(':title is now :price (your target was :target).', [
+            ->line(__('":title" on :owner\'s wishlist just dropped in price.', [
                 'title' => $this->item->title,
-                'price' => number_format((float) $this->newPrice, 2),
-                'target' => number_format((float) $this->item->target_price, 2),
+                'owner' => $ownerName,
+            ]))
+            ->line(__('It went from :old to :new — a good moment to grab it.', [
+                'old' => number_format((float) $this->oldPrice, 2),
+                'new' => number_format((float) $this->newPrice, 2),
             ]))
             ->action(__('View the item'), $link)
-            ->line(__('You are getting this because you set a target price for this item.'));
+            ->line(__('You are getting this because you could gift this item. :owner has not been told.', ['owner' => $ownerName]));
     }
 }

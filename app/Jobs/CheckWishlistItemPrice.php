@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Actions\RecordItemPrice;
+use App\Enums\PurchaseStatus;
+use App\Models\User;
 use App\Models\WishlistItem;
 use App\Notifications\WishlistItemPriceDropped;
 use App\Services\ProductMetadataScraper;
@@ -10,7 +12,9 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\RateLimited;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Throwable;
 
 class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
@@ -85,36 +89,64 @@ class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Capture the prior price before recording so we can detect a target
-        // crossing — RecordItemPrice overwrites the item's headline price.
+        // Capture the prior price before recording so we can spot a drop —
+        // RecordItemPrice overwrites the item's headline price.
         $previousPrice = $this->wishlistItem->price;
 
         $recordPrice($this->wishlistItem, $price);
 
-        $this->notifyOnTargetReached($previousPrice, $price);
+        $this->notifyOnPriceDrop($previousPrice, $price);
     }
 
     /**
-     * Email the owner when a freshly recorded price first meets their target.
-     *
-     * The alert fires only on the crossing — when the previous price was above
-     * the target (or there was none) and the new price is at or below it — so a
-     * price that simply stays low doesn't email them every night.
+     * Email the would-be buyer(s) whenever the price falls below the last
+     * recorded price. The wishlist owner is never told — they're not the one
+     * buying it — so this alerts whoever could actually act on the lower price.
      */
-    private function notifyOnTargetReached(?string $previousPrice, string $newPrice): void
+    private function notifyOnPriceDrop(?string $previousPrice, string $newPrice): void
     {
-        $target = $this->wishlistItem->target_price;
-
-        if ($target === null) {
+        // Nothing to compare against on the first observation, and only a
+        // genuine decrease should alert.
+        if ($previousPrice === null || (float) $newPrice >= (float) $previousPrice) {
             return;
         }
 
-        $justCrossed = (float) $newPrice <= (float) $target
-            && ($previousPrice === null || (float) $previousPrice > (float) $target);
+        $recipients = $this->priceDropRecipients();
 
-        if ($justCrossed) {
-            $this->wishlistItem->user->notify(new WishlistItemPriceDropped($this->wishlistItem, $newPrice));
+        if ($recipients->isNotEmpty()) {
+            Notification::send(
+                $recipients,
+                new WishlistItemPriceDropped($this->wishlistItem, $previousPrice, $newPrice),
+            );
         }
+    }
+
+    /**
+     * Who benefits from a lower price: the person who reserved the item if it's
+     * spoken for (and still just a reservation), otherwise every other member,
+     * since anyone could snap up the deal. Bought/delivered items alert no one.
+     *
+     * @return Collection<int, User>
+     */
+    private function priceDropRecipients()
+    {
+        $claim = $this->wishlistItem->purchase()->first();
+
+        if ($claim !== null) {
+            if ($claim->status !== PurchaseStatus::Reserved) {
+                return collect();
+            }
+
+            return User::query()
+                ->whereKey($claim->purchased_by_user_id)
+                ->whereNull('disabled_at')
+                ->get();
+        }
+
+        return User::query()
+            ->whereNot('id', $this->wishlistItem->user_id)
+            ->whereNull('disabled_at')
+            ->get();
     }
 
     /**

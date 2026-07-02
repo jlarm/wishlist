@@ -25,6 +25,7 @@ class UpdateUserRequest extends FormRequest
         return [
             'is_admin' => ['sometimes', 'boolean'],
             'is_disabled' => ['sometimes', 'boolean'],
+            'notify_price_drops' => ['sometimes', 'boolean'],
         ];
     }
 }

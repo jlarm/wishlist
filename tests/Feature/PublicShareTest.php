@@ -42,9 +42,9 @@ test('a shared list is viewable by a guest without logging in', function () {
             ->where('items.0.title', 'A visible wish'));
 });
 
-test('the public list never exposes claim status or the target price', function () {
+test('the public list never exposes claim status', function () {
     $owner = User::factory()->create(['share_token' => 'share-me']);
-    $item = WishlistItem::factory()->for($owner)->create(['target_price' => 50.00]);
+    $item = WishlistItem::factory()->for($owner)->create();
     WishlistItemPurchase::factory()->create([
         'wishlist_item_id' => $item->id,
         'purchased_by_user_id' => User::factory()->create()->id,
@@ -53,8 +53,7 @@ test('the public list never exposes claim status or the target price', function 
     $this->get(route('wishlist.shared', 'share-me'))
         ->assertInertia(fn ($page) => $page
             ->where('items.0.is_purchased', false)
-            ->where('items.0.purchase', null)
-            ->missing('items.0.target_price'));
+            ->where('items.0.purchase', null));
 });
 
 test('an unknown or disabled share token is not found', function () {

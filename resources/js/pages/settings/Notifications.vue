@@ -53,8 +53,8 @@ function submit() {
                 <span class="grid gap-1">
                     <span class="text-sm font-medium"> Price-drop alerts </span>
                     <span class="text-sm text-muted-foreground">
-                        Email me when an item on my wishlist drops to or below
-                        the target price I set for it.
+                        Email me when a gift I could buy drops in price — an
+                        item I've reserved, or anything still up for grabs.
                     </span>
                 </span>
             </label>

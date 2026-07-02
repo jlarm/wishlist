@@ -48,6 +48,29 @@ test('admin can change a user role', function () {
     expect($user->fresh()->is_admin)->toBeTrue();
 });
 
+test('admin can toggle a user\'s price-drop emails', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create(['notify_price_drops' => true]);
+
+    $this->actingAs($admin)
+        ->patch(route('admin.users.update', $user), ['notify_price_drops' => false])
+        ->assertRedirect(route('admin.users.index'));
+
+    expect($user->fresh()->notify_price_drops)->toBeFalse();
+});
+
+test('the users page exposes each member\'s price-email setting', function () {
+    $admin = User::factory()->admin()->create(['name' => 'Aaa Admin']);
+    User::factory()->create(['name' => 'Zzz Member', 'notify_price_drops' => false]);
+
+    // Ordered by name, so the member is last.
+    $this->actingAs($admin)
+        ->get(route('admin.users.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('users.1.name', 'Zzz Member')
+            ->where('users.1.notify_price_drops', false));
+});
+
 test('admin cannot disable themselves', function () {
     $admin = User::factory()->admin()->create();
 
