@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PurchaseStatus;
 use Database\Factories\WishlistItemPurchaseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +13,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $wishlist_item_id
  * @property int $purchased_by_user_id
+ * @property PurchaseStatus $status
  * @property Carbon $purchased_at
  * @property string|null $note
  * @property Carbon|null $created_at
@@ -30,8 +32,18 @@ class WishlistItemPurchase extends Model
     protected $fillable = [
         'wishlist_item_id',
         'purchased_by_user_id',
+        'status',
         'purchased_at',
         'note',
+    ];
+
+    /**
+     * The model's default attribute values, mirroring the migration default.
+     *
+     * @var array<string, string>
+     */
+    protected $attributes = [
+        'status' => PurchaseStatus::Reserved->value,
     ];
 
     /**
@@ -42,8 +54,17 @@ class WishlistItemPurchase extends Model
     protected function casts(): array
     {
         return [
+            'status' => PurchaseStatus::class,
             'purchased_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Whether the claim has been upgraded from a soft reservation to a purchase.
+     */
+    public function isPurchased(): bool
+    {
+        return $this->status === PurchaseStatus::Purchased;
     }
 
     /**

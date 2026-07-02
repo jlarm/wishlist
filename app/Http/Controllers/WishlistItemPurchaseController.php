@@ -14,33 +14,49 @@ class WishlistItemPurchaseController extends Controller
     public function __construct(private readonly PurchaseService $purchases) {}
 
     /**
-     * Mark a wishlist item as purchased.
+     * Reserve a wishlist item (a soft claim).
      */
     public function store(StorePurchaseRequest $request, WishlistItem $wishlistItem): RedirectResponse
     {
         if ($wishlistItem->purchase()->exists()) {
-            return back()->with('toast', ['type' => 'info', 'message' => __('This item was already marked as purchased.')]);
+            return back()->with('toast', ['type' => 'info', 'message' => __('This item has already been claimed.')]);
         }
 
-        $this->purchases->markPurchased($wishlistItem, $request->user(), $request->validated('note'));
+        $this->purchases->reserve($wishlistItem, $request->user(), $request->validated('note'));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Marked as purchased.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Reserved. The group will know it\'s taken.')]);
 
         return back();
     }
 
     /**
-     * Unmark a purchase. Only the user who marked it may remove it.
+     * Upgrade a reservation to a confirmed purchase. Only the claimer may do so.
+     */
+    public function update(Request $request, WishlistItem $wishlistItem): RedirectResponse
+    {
+        $claim = $wishlistItem->purchase()->firstOrFail();
+
+        abort_unless($claim->purchased_by_user_id === $request->user()->id, 403);
+
+        $this->purchases->markBought($claim);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Marked as bought.')]);
+
+        return back();
+    }
+
+    /**
+     * Release a claim. Only the user who made it may remove it.
      */
     public function destroy(Request $request, WishlistItem $wishlistItem): RedirectResponse
     {
-        $purchase = $wishlistItem->purchase()->firstOrFail();
+        $claim = $wishlistItem->purchase()->firstOrFail();
 
-        abort_unless($purchase->purchased_by_user_id === $request->user()->id, 403);
+        abort_unless($claim->purchased_by_user_id === $request->user()->id, 403);
 
-        $this->purchases->unmarkPurchased($purchase);
+        $this->purchases->release($claim);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Purchase removed.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Claim removed.')]);
 
         return back();
     }

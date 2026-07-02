@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm, useHttp } from '@inertiajs/vue3';
-import { Check, ImageOff, Sparkles, TriangleAlert } from '@lucide/vue';
+import { Check, ImageOff, Sparkles, TriangleAlert, X } from '@lucide/vue';
 import { ref } from 'vue';
 import ProductMetadataController from '@/actions/App/Http/Controllers/ProductMetadataController';
 import InputError from '@/components/InputError.vue';
@@ -36,6 +36,7 @@ type WishlistItemFormData = {
     target_price: string;
     size: string;
     color: string;
+    tags: string[];
     priority: string;
     notes: string;
     visibility_status: string;
@@ -59,11 +60,13 @@ const form = useForm<WishlistItemFormData>({
     target_price: props.initial?.target_price ?? '',
     size: props.initial?.size ?? '',
     color: props.initial?.color ?? '',
+    tags: props.initial?.tags ? [...props.initial.tags] : [],
     priority: props.initial?.priority ?? 'medium',
     notes: props.initial?.notes ?? '',
     visibility_status: props.initial?.visibility_status ?? 'visible',
 });
 
+const tagInput = ref('');
 const imageFailed = ref(false);
 const suggestedImages = ref<string[]>([]);
 const fetchError = ref<string | null>(null);
@@ -142,6 +145,31 @@ function fetchMetadata() {
             // The handlers above already surfaced a message; useHttp rethrows on
             // non-422 failures, so swallow it to avoid an unhandled rejection.
         });
+}
+
+function addTag() {
+    const tag = tagInput.value.trim();
+
+    // Dedupe case-insensitively, mirroring the server-side normalization.
+    const exists = form.tags.some(
+        (existing) => existing.toLowerCase() === tag.toLowerCase(),
+    );
+
+    if (tag && !exists && form.tags.length < 20) {
+        form.tags.push(tag.slice(0, 50));
+    }
+
+    tagInput.value = '';
+}
+
+function removeTag(tag: string) {
+    form.tags = form.tags.filter((existing) => existing !== tag);
+}
+
+function backspaceTag() {
+    if (!tagInput.value && form.tags.length) {
+        form.tags.pop();
+    }
 }
 
 function selectImage(url: string) {
@@ -395,6 +423,48 @@ function submit() {
                 />
                 <InputError :message="form.errors.color" />
             </div>
+        </div>
+
+        <div class="grid gap-2">
+            <Label for="tags">Tags</Label>
+            <div
+                class="flex flex-wrap items-center gap-1.5 rounded-md border border-input bg-transparent px-2 py-1.5 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30"
+            >
+                <span
+                    v-for="tag in form.tags"
+                    :key="tag"
+                    class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium"
+                >
+                    {{ tag }}
+                    <button
+                        type="button"
+                        class="text-muted-foreground hover:text-foreground"
+                        :aria-label="`Remove ${tag}`"
+                        @click="removeTag(tag)"
+                    >
+                        <X class="size-3" />
+                    </button>
+                </span>
+                <input
+                    id="tags"
+                    v-model="tagInput"
+                    type="text"
+                    class="min-w-[8rem] flex-1 bg-transparent px-1 py-0.5 text-sm outline-none"
+                    :placeholder="
+                        form.tags.length ? '' : 'Books, Kitchen, For the kids…'
+                    "
+                    @keydown.enter.prevent="addTag"
+                    @keydown="
+                        (e) => e.key === ',' && (e.preventDefault(), addTag())
+                    "
+                    @keydown.delete="backspaceTag"
+                    @blur="addTag"
+                />
+            </div>
+            <p class="text-xs text-muted-foreground">
+                Press Enter or comma to add a tag. Use them to group your list.
+            </p>
+            <InputError :message="form.errors.tags" />
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">

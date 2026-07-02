@@ -61,6 +61,8 @@ class WishlistController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'is_me' => $isOwnWishlist,
+                // Only the owner manages their own public link.
+                'share_token' => $isOwnWishlist ? $user->share_token : null,
             ],
             'items' => WishlistItemResource::collection($items)->resolve(),
         ]);

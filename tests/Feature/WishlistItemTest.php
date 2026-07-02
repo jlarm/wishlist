@@ -73,6 +73,44 @@ test('user can set a target price when creating an item', function () {
     expect(WishlistItem::where('user_id', $user->id)->sole()->target_price)->toBe('99.00');
 });
 
+test('an item can be created with tags, which are normalized', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('wishlist-items.store'), [
+        'title' => 'Cookbook',
+        'tags' => ['Books', ' Kitchen ', 'books', ''],
+        'priority' => Priority::Medium->value,
+        'visibility_status' => 'visible',
+    ])->assertRedirect(route('wishlists.show', $user));
+
+    // Trimmed, blanks dropped, case-insensitive duplicate removed.
+    expect(WishlistItem::where('user_id', $user->id)->sole()->tags)
+        ->toBe(['Books', 'Kitchen']);
+});
+
+test('tags are exposed on the wishlist page to any viewer', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+    WishlistItem::factory()->for($owner)->create(['tags' => ['Tech', 'Home']]);
+
+    $this->actingAs($viewer)
+        ->get(route('wishlists.show', $owner))
+        ->assertInertia(fn ($page) => $page->where('items.0.tags', ['Tech', 'Home']));
+});
+
+test('a tag cannot exceed the length limit', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('wishlist-items.store'), [
+            'title' => 'Thing',
+            'tags' => [str_repeat('a', 51)],
+            'priority' => Priority::Medium->value,
+            'visibility_status' => 'visible',
+        ])
+        ->assertSessionHasErrors('tags.0');
+});
+
 test('the owner sees the target price but other viewers never do', function () {
     $owner = User::factory()->create();
     $viewer = User::factory()->create();

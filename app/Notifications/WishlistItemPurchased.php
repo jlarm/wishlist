@@ -46,12 +46,12 @@ class WishlistItemPurchased extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject(__('A gift has been claimed: :title', ['title' => $this->item->title]))
-            ->line(__(':buyer marked ":title" on :owner\'s wishlist as purchased.', [
+            ->line(__(':buyer has claimed ":title" on :owner\'s wishlist.', [
                 'buyer' => $this->purchaser->name,
                 'title' => $this->item->title,
                 'owner' => $ownerName,
             ]))
-            ->line(__('No need to buy this one — you can pick something else from their list.'))
+            ->line(__('No need to get this one — you can pick something else from their list.'))
             ->action(__(":owner's wishlist", ['owner' => $ownerName]), route('wishlists.show', $this->item->user_id))
             ->line(__('Only you and the other gift-givers can see this — :owner has not been told.', ['owner' => $ownerName]));
     }

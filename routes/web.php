@@ -5,9 +5,11 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvitationAcceptanceController;
 use App\Http\Controllers\ProductMetadataController;
+use App\Http\Controllers\PublicWishlistController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\WishlistItemController;
 use App\Http\Controllers\WishlistItemPurchaseController;
+use App\Http\Controllers\WishlistShareController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +38,11 @@ Route::middleware('guest')->group(function () {
 });
 
 /*
+ * Public, read-only wishlist shared by its token. No account required.
+ */
+Route::get('shared/{token}', [PublicWishlistController::class, 'show'])->name('wishlist.shared');
+
+/*
  * Authenticated, verified and active (non-disabled) users.
  */
 Route::middleware(['auth', 'verified', 'active'])->group(function () {
@@ -54,7 +61,12 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
     Route::put('wishlist-items/{wishlistItem}', [WishlistItemController::class, 'update'])->name('wishlist-items.update');
     Route::delete('wishlist-items/{wishlistItem}', [WishlistItemController::class, 'destroy'])->name('wishlist-items.destroy');
 
+    // Manage the public share link for the authenticated user's own wishlist.
+    Route::post('wishlist/share', [WishlistShareController::class, 'store'])->name('wishlist.share.store');
+    Route::delete('wishlist/share', [WishlistShareController::class, 'destroy'])->name('wishlist.share.destroy');
+
     Route::post('wishlist-items/{wishlistItem}/purchase', [WishlistItemPurchaseController::class, 'store'])->name('wishlist-items.purchase.store');
+    Route::patch('wishlist-items/{wishlistItem}/purchase', [WishlistItemPurchaseController::class, 'update'])->name('wishlist-items.purchase.update');
     Route::delete('wishlist-items/{wishlistItem}/purchase', [WishlistItemPurchaseController::class, 'destroy'])->name('wishlist-items.purchase.destroy');
 
     Route::get('wishlists/{user}', [WishlistController::class, 'show'])->name('wishlists.show');

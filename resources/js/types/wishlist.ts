@@ -4,11 +4,13 @@ export type SelectOption = {
 };
 
 export type PurchaseInfo = {
+    status: 'reserved' | 'purchased';
     purchased_by_name: string | null;
     purchased_at: string | null;
     note: string | null;
     purchased_by_me: boolean;
     can_unmark: boolean;
+    can_mark_bought: boolean;
 };
 
 export type PricePoint = {
@@ -29,6 +31,7 @@ export type WishlistItem = {
     target_price?: string | null;
     size: string | null;
     color: string | null;
+    tags: string[];
     priority: string;
     priority_label: string;
     priority_weight: number;

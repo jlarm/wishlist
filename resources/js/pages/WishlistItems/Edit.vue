@@ -14,6 +14,7 @@ type EditableItem = {
     target_price: string | null;
     size: string | null;
     color: string | null;
+    tags: string[];
     priority: string;
     notes: string | null;
     visibility_status: string;
@@ -34,6 +35,7 @@ const initial = {
     target_price: props.item.target_price ?? '',
     size: props.item.size ?? '',
     color: props.item.color ?? '',
+    tags: props.item.tags ?? [],
     priority: props.item.priority,
     notes: props.item.notes ?? '',
     visibility_status: props.item.visibility_status,

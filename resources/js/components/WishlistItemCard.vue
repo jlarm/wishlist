@@ -6,6 +6,7 @@ import {
     Gift,
     ImageOff,
     Pencil,
+    Tag,
     Target,
     Trash2,
 } from '@lucide/vue';
@@ -101,7 +102,7 @@ const purchasedDate = computed(() => {
     return at ? new Date(at).toLocaleDateString() : null;
 });
 
-function markPurchased() {
+function reserve() {
     processing.value = true;
     router.post(
         WishlistItemPurchaseController.store(props.item.id).url,
@@ -116,7 +117,21 @@ function markPurchased() {
     );
 }
 
-function unmarkPurchased() {
+function markBought() {
+    processing.value = true;
+    router.patch(
+        WishlistItemPurchaseController.update(props.item.id).url,
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                processing.value = false;
+            },
+        },
+    );
+}
+
+function release() {
     processing.value = true;
     router.delete(WishlistItemPurchaseController.destroy(props.item.id).url, {
         preserveScroll: true,
@@ -218,6 +233,18 @@ function deleteItem() {
                 </span>
             </div>
 
+            <!-- Free-form tags -->
+            <div v-if="item.tags.length" class="flex flex-wrap gap-1.5">
+                <span
+                    v-for="tag in item.tags"
+                    :key="tag"
+                    class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
+                >
+                    <Tag class="size-3 text-muted-foreground" />
+                    {{ tag }}
+                </span>
+            </div>
+
             <!-- Nightly price history -->
             <div
                 v-if="hasPriceHistory"
@@ -258,7 +285,11 @@ function deleteItem() {
                     class="flex items-center gap-1.5 text-sm font-semibold text-cranberry"
                 >
                     <Check class="size-4" />
-                    Claimed<template v-if="item.purchase?.purchased_by_name">
+                    {{
+                        item.purchase?.status === 'purchased'
+                            ? 'Bought'
+                            : 'Reserved'
+                    }}<template v-if="item.purchase?.purchased_by_name">
                         by {{ item.purchase.purchased_by_name }}</template
                     >
                     <span
@@ -266,6 +297,12 @@ function deleteItem() {
                         class="font-normal"
                         >(you)</span
                     >
+                </p>
+                <p
+                    v-if="item.purchase?.status === 'reserved'"
+                    class="mt-0.5 text-xs text-muted-foreground"
+                >
+                    Not bought yet — still a soft hold.
                 </p>
                 <p
                     v-if="purchasedDate"
@@ -328,16 +365,16 @@ function deleteItem() {
                 <template v-else>
                     <ConfirmDialog
                         v-if="item.can.purchase && !item.is_purchased"
-                        title="Claim this gift?"
-                        :description="`Let the group know you're getting “${item.title}”. ${item.owner_name ?? 'They'} will never see it.`"
-                        confirm-label="Claim it"
+                        title="Reserve this gift?"
+                        :description="`Let the group know you're planning to get “${item.title}”. ${item.owner_name ?? 'They'} will never see it. You can mark it as bought later.`"
+                        confirm-label="Reserve it"
                         :processing="processing"
-                        @confirm="markPurchased"
+                        @confirm="reserve"
                     >
                         <template #trigger>
                             <Button size="sm">
                                 <Gift class="size-4" />
-                                Claim gift
+                                Reserve
                             </Button>
                         </template>
                         <div class="grid gap-2">
@@ -350,19 +387,29 @@ function deleteItem() {
                             <Textarea
                                 id="purchase-note"
                                 v-model="purchaseNote"
-                                placeholder="e.g. ordered, arriving next week"
+                                placeholder="e.g. planning to order this week"
                             />
                         </div>
                     </ConfirmDialog>
+
+                    <Button
+                        v-if="item.purchase?.can_mark_bought"
+                        size="sm"
+                        :disabled="processing"
+                        @click="markBought"
+                    >
+                        <Check class="size-4" />
+                        Mark as bought
+                    </Button>
 
                     <Button
                         v-if="item.is_purchased && item.purchase?.can_unmark"
                         variant="ghost"
                         size="sm"
                         :disabled="processing"
-                        @click="unmarkPurchased"
+                        @click="release"
                     >
-                        Unclaim
+                        Release
                     </Button>
                 </template>
             </div>

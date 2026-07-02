@@ -25,6 +25,10 @@ trait WishlistItemValidationRules
             'target_price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'size' => ['nullable', 'string', 'max:100'],
             'color' => ['nullable', 'string', 'max:100'],
+            'tags' => ['nullable', 'array', 'max:20'],
+            // Empty values are tolerated (and dropped by the model's normalizer)
+            // so a stray blank tag can't 422 the whole form.
+            'tags.*' => ['nullable', 'string', 'max:50'],
             'priority' => ['required', Rule::enum(Priority::class)],
             'notes' => ['nullable', 'string', 'max:5000'],
             'visibility_status' => ['required', Rule::enum(VisibilityStatus::class)],

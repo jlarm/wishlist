@@ -42,6 +42,7 @@ class WishlistItemResource extends JsonResource
             'target_price' => $this->when($isOwner, fn () => $this->target_price),
             'size' => $this->size,
             'color' => $this->color,
+            'tags' => $this->tags,
             'priority' => $this->priority->value,
             'priority_label' => $this->priority->label(),
             'priority_weight' => $this->priority->weight(),
@@ -72,15 +73,22 @@ class WishlistItemResource extends JsonResource
                 && ! $hasPurchase
                 && $viewer->can('purchase', $this->resource);
 
+            // "is_purchased" here means the item is claimed (taken) in any state;
+            // the precise reserved-vs-bought state lives in purchase.status.
             $data['is_purchased'] = $hasPurchase;
+
+            $isMine = $hasPurchase
+                && $viewer !== null
+                && $viewer->id === $this->purchase->purchased_by_user_id;
+
             $data['purchase'] = $hasPurchase ? [
+                'status' => $this->purchase->status->value,
                 'purchased_by_name' => $this->purchase->purchasedBy?->name,
                 'purchased_at' => $this->purchase->purchased_at->toIso8601String(),
                 'note' => $this->purchase->note,
-                'purchased_by_me' => $viewer !== null
-                    && $viewer->id === $this->purchase->purchased_by_user_id,
-                'can_unmark' => $viewer !== null
-                    && $viewer->id === $this->purchase->purchased_by_user_id,
+                'purchased_by_me' => $isMine,
+                'can_unmark' => $isMine,
+                'can_mark_bought' => $isMine && ! $this->purchase->isPurchased(),
             ] : null;
         }
 

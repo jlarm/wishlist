@@ -13,6 +13,8 @@ createInertiaApp({
     layout: (name) => {
         switch (true) {
             case name === 'Welcome':
+            // Public share page is standalone — it has no authenticated user.
+            case name === 'SharedWishlist':
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;

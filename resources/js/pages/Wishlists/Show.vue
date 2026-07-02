@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { Gift, Link2, Plus, Search } from '@lucide/vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { Gift, Globe, Link2, Plus, RotateCw, Search, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
+import WishlistShareController from '@/actions/App/Http/Controllers/WishlistShareController';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import WishlistItemCard from '@/components/WishlistItemCard.vue';
 import { create as createItem } from '@/routes/wishlist-items';
@@ -11,15 +20,77 @@ import { show as wishlistShow } from '@/routes/wishlists';
 import type { WishlistItem } from '@/types';
 
 const props = defineProps<{
-    owner: { id: number; name: string; is_me: boolean };
+    owner: {
+        id: number;
+        name: string;
+        is_me: boolean;
+        share_token: string | null;
+    };
     items: WishlistItem[];
 }>();
+
+const shareProcessing = ref(false);
+
+// The public, no-login URL for this list, or null when sharing is off.
+const publicUrl = computed(() =>
+    props.owner.share_token
+        ? new URL(`/shared/${props.owner.share_token}`, window.location.origin)
+              .href
+        : null,
+);
+
+function enableSharing() {
+    shareProcessing.value = true;
+    router.post(
+        WishlistShareController.store.url(),
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => (shareProcessing.value = false),
+        },
+    );
+}
+
+function disableSharing() {
+    shareProcessing.value = true;
+    router.delete(WishlistShareController.destroy.url(), {
+        preserveScroll: true,
+        onFinish: () => (shareProcessing.value = false),
+    });
+}
+
+async function copyPublicLink() {
+    if (!publicUrl.value) {
+        return;
+    }
+
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(publicUrl.value);
+        } else {
+            copyWithFallback(publicUrl.value);
+        }
+
+        toast.success('Public link copied to clipboard.');
+    } catch {
+        toast.error('Could not copy link.');
+    }
+}
 
 const search = ref('');
 const sortBy = ref<'priority' | 'newest' | 'price_asc' | 'price_desc'>(
     'priority',
 );
 const priorityFilter = ref<string>('all');
+const tagFilter = ref<string>('all');
+
+// Every distinct tag across the list, for the filter dropdown.
+const allTags = computed(() => {
+    const tags = new Set<string>();
+    props.items.forEach((item) => item.tags.forEach((tag) => tags.add(tag)));
+
+    return [...tags].sort((a, b) => a.localeCompare(b));
+});
 
 const selectClass =
     'border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px]';
@@ -42,6 +113,10 @@ const visibleItems = computed(() => {
         result = result.filter(
             (item) => item.priority === priorityFilter.value,
         );
+    }
+
+    if (tagFilter.value !== 'all') {
+        result = result.filter((item) => item.tags.includes(tagFilter.value));
     }
 
     result.sort((a, b) => {
@@ -137,6 +212,90 @@ function copyWithFallback(text: string) {
                         <Link2 class="size-4" />
                         Copy link
                     </Button>
+
+                    <Dialog v-if="owner.is_me">
+                        <DialogTrigger as-child>
+                            <Button variant="outline">
+                                <Globe class="size-4" />
+                                Share publicly
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent class="sm:max-w-lg">
+                            <DialogHeader>
+                                <DialogTitle
+                                    >Share your list publicly</DialogTitle
+                                >
+                                <DialogDescription>
+                                    Create a read-only link anyone can open — no
+                                    account needed. It never shows who's claimed
+                                    what, so it's safe to share with family.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div v-if="publicUrl" class="grid gap-3">
+                                <div class="flex gap-2">
+                                    <Input
+                                        :model-value="publicUrl"
+                                        readonly
+                                        class="flex-1"
+                                        @focus="
+                                            (e: FocusEvent) =>
+                                                (
+                                                    e.target as HTMLInputElement
+                                                ).select()
+                                        "
+                                    />
+                                    <Button
+                                        type="button"
+                                        @click="copyPublicLink"
+                                    >
+                                        <Link2 class="size-4" />
+                                        Copy
+                                    </Button>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        :disabled="shareProcessing"
+                                        @click="enableSharing"
+                                    >
+                                        <RotateCw class="size-4" />
+                                        Regenerate
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        :disabled="shareProcessing"
+                                        @click="disableSharing"
+                                    >
+                                        <X class="size-4" />
+                                        Turn off
+                                    </Button>
+                                </div>
+                                <p class="text-xs text-muted-foreground">
+                                    Regenerating makes the old link stop
+                                    working.
+                                </p>
+                            </div>
+
+                            <div v-else class="grid gap-3">
+                                <p class="text-sm text-muted-foreground">
+                                    Public sharing is off. Create a link to let
+                                    people outside the group see your list.
+                                </p>
+                                <Button
+                                    type="button"
+                                    :disabled="shareProcessing"
+                                    @click="enableSharing"
+                                >
+                                    <Globe class="size-4" />
+                                    Create public link
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+
                     <Button v-if="owner.is_me" as-child>
                         <Link :href="createItem()">
                             <Plus class="size-4" />
@@ -172,6 +331,17 @@ function copyWithFallback(text: string) {
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
                 <option value="low">Low</option>
+            </select>
+            <select
+                v-if="allTags.length"
+                v-model="tagFilter"
+                :class="selectClass"
+                aria-label="Filter by tag"
+            >
+                <option value="all">All tags</option>
+                <option v-for="tag in allTags" :key="tag" :value="tag">
+                    {{ tag }}
+                </option>
             </select>
             <select v-model="sortBy" :class="selectClass" aria-label="Sort by">
                 <option value="priority">Sort: Priority</option>
