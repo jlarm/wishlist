@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -47,6 +48,13 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
+
+        // Behind Ploi's TLS termination the app can see requests as plain HTTP.
+        // Force HTTPS so every generated URL — including invite links built in
+        // the queue worker, where there is no request scheme — stays secure.
+        if (app()->isProduction()) {
+            URL::forceScheme('https');
+        }
 
         // Surface N+1 regressions during development; never break production.
         Model::preventLazyLoading(! app()->isProduction());

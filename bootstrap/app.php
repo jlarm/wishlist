@@ -26,6 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ->environments(['production']);
     })
     ->withMiddleware(function (Middleware $middleware): void {
+        // Cloudflare proxies every request, so honor its X-Forwarded-* headers.
+        // Without this Laravel sees requests as plain HTTP, breaking https URL
+        // generation and secure session cookies (419s on the guest invite form).
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [

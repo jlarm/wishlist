@@ -6,6 +6,7 @@ use App\Models\Invitation;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 test('admin can invite a user', function () {
@@ -171,4 +172,16 @@ test('admin can revoke a pending invite', function () {
 
 test('public registration route does not exist', function () {
     expect(Route::has('register'))->toBeFalse();
+});
+
+test('invite emails build a secure https accept link', function () {
+    // Production forces the https scheme; the queued mailer builds its link
+    // from route() with no request scheme, so a secure link must survive that.
+    URL::forceScheme('https');
+
+    $invitation = Invitation::factory()->create();
+    $mail = new InvitationMail($invitation, 'plain-token');
+
+    expect(route('invite.show', 'plain-token'))->toStartWith('https://');
+    $mail->assertSeeInHtml(route('invite.show', 'plain-token'));
 });
