@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, ImageOff, Tag } from '@lucide/vue';
+import { Check, Tag } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PriceHistoryChart from '@/components/PriceHistoryChart.vue';
 import WishlistItemActions from '@/components/WishlistItemActions.vue';
@@ -11,6 +11,14 @@ const props = defineProps<{
 }>();
 
 const imageFailed = ref(false);
+
+// Fall back to the tree illustration when an item has no image or the image
+// fails to load.
+const displayImage = computed(() =>
+    props.item.image_url && !imageFailed.value
+        ? props.item.image_url
+        : '/tree.webp',
+);
 
 const ornamentClass = computed(() => {
     switch (props.item.priority) {
@@ -107,13 +115,11 @@ const claimByline = computed(() => {
             class="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-muted"
         >
             <img
-                v-if="item.image_url && !imageFailed"
-                :src="item.image_url"
+                :src="displayImage"
                 :alt="item.title"
                 class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                 @error="imageFailed = true"
             />
-            <ImageOff v-else class="size-8 text-muted-foreground" />
 
             <span
                 v-if="item.visibility_status === 'hidden'"

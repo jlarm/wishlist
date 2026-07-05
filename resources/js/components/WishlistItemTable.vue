@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ImageOff } from '@lucide/vue';
 import WishlistItemActions from '@/components/WishlistItemActions.vue';
 import type { WishlistItem } from '@/types';
 
@@ -84,14 +83,9 @@ function claimTooltip(item: WishlistItem): string {
                                 class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted"
                             >
                                 <img
-                                    v-if="item.image_url"
-                                    :src="item.image_url"
+                                    :src="item.image_url ?? '/tree.webp'"
                                     :alt="item.title"
                                     class="h-full w-full object-cover"
-                                />
-                                <ImageOff
-                                    v-else
-                                    class="size-4 text-muted-foreground"
                                 />
                             </div>
                             <div class="min-w-0">
