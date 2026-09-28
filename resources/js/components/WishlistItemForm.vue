@@ -18,14 +18,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import type { SharedProduct } from '@/lib/bookmarklet';
 import type { SelectOption } from '@/types';
 
-type ProductMetadata = {
-    title: string | null;
-    description: string | null;
-    price: string | null;
-    images: string[];
-};
+type ProductMetadata = SharedProduct;
 
 type WishlistItemFormData = {
     title: string;
@@ -52,6 +48,8 @@ const props = defineProps<{
     autoFetch?: boolean;
     // The shared page's title, used only if fetching can't find a better one.
     fallbackTitle?: string | null;
+    // Details the bookmarklet already read off the store page, if any.
+    sharedDetails?: SharedProduct | null;
 }>();
 
 const form = useForm<WishlistItemFormData>({
@@ -80,6 +78,37 @@ const metadata = useHttp<{ url: string }>({ url: '' });
 const selectClass =
     'border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px]';
 
+/**
+ * Fill the empty fields from fetched details, returning whether any were found.
+ */
+function applyMetadata(data: ProductMetadata): boolean {
+    // Only fill empty fields so we never clobber what the user typed.
+    if (data.title && !form.title) {
+        form.title = data.title;
+    }
+
+    if (data.description && !form.description) {
+        form.description = data.description;
+    }
+
+    if (data.price && !form.price) {
+        form.price = data.price;
+    }
+
+    suggestedImages.value = data.images;
+
+    if (data.images.length > 0 && !form.image_url) {
+        selectImage(data.images[0]);
+    }
+
+    return (
+        data.images.length > 0 ||
+        !!data.title ||
+        !!data.description ||
+        !!data.price
+    );
+}
+
 function fetchMetadata(): Promise<unknown> {
     if (!form.url) {
         return Promise.resolve();
@@ -94,32 +123,7 @@ function fetchMetadata(): Promise<unknown> {
             onSuccess: (response: unknown) => {
                 const data = response as ProductMetadata;
 
-                // Only fill empty fields so we never clobber what the user typed.
-                if (data.title && !form.title) {
-                    form.title = data.title;
-                }
-
-                if (data.description && !form.description) {
-                    form.description = data.description;
-                }
-
-                if (data.price && !form.price) {
-                    form.price = data.price;
-                }
-
-                suggestedImages.value = data.images;
-
-                if (data.images.length > 0 && !form.image_url) {
-                    selectImage(data.images[0]);
-                }
-
-                const foundAnything =
-                    data.images.length > 0 ||
-                    !!data.title ||
-                    !!data.description ||
-                    !!data.price;
-
-                if (foundAnything) {
+                if (applyMetadata(data)) {
                     fetchSuccess.value = data.images.length
                         ? 'Pulled in the details. Pick an image below, then tap Done.'
                         : 'Pulled in the details. Tap Done to review them.';
@@ -151,6 +155,20 @@ function fetchMetadata(): Promise<unknown> {
 
 onMounted(() => {
     if (!props.autoFetch || !form.url) {
+        return;
+    }
+
+    // The bookmarklet already read the page in the user's browser, so skip
+    // the server fetch; only ask them to pick when there's an image choice.
+    if (props.sharedDetails?.title) {
+        applyMetadata(props.sharedDetails);
+
+        if (props.sharedDetails.images.length > 1) {
+            fetchSuccess.value =
+                'Pulled in the details. Pick an image below, then tap Done.';
+            fetchDialogOpen.value = true;
+        }
+
         return;
     }
 

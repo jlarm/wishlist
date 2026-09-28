@@ -9,6 +9,7 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import WishlistItemForm from '@/components/WishlistItemForm.vue';
+import { bookmarkletHref, readSharedProduct } from '@/lib/bookmarklet';
 import { create } from '@/routes/wishlist-items';
 import type { SelectOption } from '@/types';
 
@@ -19,12 +20,15 @@ const props = defineProps<{
     prefill: { url: string; title: string | null } | null;
 }>();
 
-// Opens this page with the current tab's URL and title from any site.
-const bookmarklet = computed(() => {
-    const target = new URL(create().url, window.location.origin).href;
+// Reads the product off any store page and opens this page with it.
+const bookmarklet = computed(() =>
+    bookmarkletHref(new URL(create().url, window.location.origin).href),
+);
 
-    return `javascript:(()=>{location.href='${target}?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title)})()`;
-});
+// Details the bookmarklet read off the store page, carried in the fragment.
+const sharedDetails = props.prefill
+    ? readSharedProduct(window.location.hash)
+    : null;
 </script>
 
 <template>
@@ -60,6 +64,7 @@ const bookmarklet = computed(() => {
                 "
                 :auto-fetch="!!props.prefill"
                 :fallback-title="props.prefill?.title"
+                :shared-details="sharedDetails"
             />
         </div>
 
@@ -82,7 +87,9 @@ const bookmarklet = computed(() => {
                         <p>
                             <span class="font-medium">On a computer:</span>
                             drag this button to your bookmarks bar. On any
-                            product page, click it to add that page here.
+                            product page, click it to add that product here — it
+                            even works on stores like Amazon. Already have the
+                            old one? Drag this one over it.
                         </p>
                         <a
                             :href="bookmarklet"
