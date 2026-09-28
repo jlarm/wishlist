@@ -20,12 +20,14 @@ const props = defineProps<{
     preferences: {
         notify_price_drops: boolean;
         notify_gift_purchases: boolean;
+        notify_occasion_reminders: boolean;
     };
 }>();
 
 const form = useForm({
     notify_price_drops: props.preferences.notify_price_drops,
     notify_gift_purchases: props.preferences.notify_gift_purchases,
+    notify_occasion_reminders: props.preferences.notify_occasion_reminders,
 });
 
 function submit() {
@@ -71,6 +73,25 @@ function submit() {
                         Email me when someone claims a gift on another person's
                         wishlist, so I don't buy the same thing. The list owner
                         is never told.
+                    </span>
+                </span>
+            </label>
+
+            <label
+                class="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-card p-4"
+            >
+                <Checkbox
+                    v-model="form.notify_occasion_reminders"
+                    class="mt-0.5"
+                />
+                <span class="grid gap-1">
+                    <span class="text-sm font-medium">
+                        Occasion reminders
+                    </span>
+                    <span class="text-sm text-muted-foreground">
+                        Email me 30 and 7 days before someone's birthday,
+                        Christmas or other occasion, with how many of their
+                        wishes are still unclaimed.
                     </span>
                 </span>
             </label>

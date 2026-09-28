@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Enums\ClaimRemovalReason;
 use App\Enums\PurchaseStatus;
 use App\Models\User;
 use App\Models\WishlistItem;
 use App\Models\WishlistItemPurchase;
+use App\Notifications\ClaimedItemChanged;
+use App\Notifications\ClaimedItemRemoved;
 use App\Notifications\WishlistItemPurchased;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
@@ -79,5 +82,75 @@ class PurchaseService
     public function release(WishlistItemPurchase $claim): void
     {
         $claim->delete();
+    }
+
+    /**
+     * The claimer says they still intend to get a reserved item, restarting the
+     * stale-reservation clock.
+     */
+    public function confirm(WishlistItemPurchase $claim): void
+    {
+        $claim->update([
+            'confirmed_at' => Carbon::now(),
+            'reminded_at' => null,
+        ]);
+    }
+
+    /**
+     * Tell the claimer that details they may be buying against have changed.
+     *
+     * Nothing is sent once the gift is delivered — it's too late to matter.
+     *
+     * @param  array<string, array{from: ?string, to: ?string}>  $changes
+     */
+    public function alertClaimerOfChanges(WishlistItem $item, array $changes): void
+    {
+        $claim = $this->activeClaim($item);
+
+        if ($changes === [] || $claim === null) {
+            return;
+        }
+
+        $claim->purchasedBy->notify(new ClaimedItemChanged($item, $changes));
+    }
+
+    /**
+     * Tell the claimer an item they claimed was deleted, hidden, or received
+     * elsewhere. A received item's reservation is released outright, since the
+     * owner already has it; a bought claim is kept so the giver is still
+     * credited if it was their gift.
+     */
+    public function alertClaimerOfRemoval(WishlistItem $item, ClaimRemovalReason $reason): void
+    {
+        $claim = $this->activeClaim($item);
+
+        if ($claim === null) {
+            return;
+        }
+
+        if ($reason === ClaimRemovalReason::Received && $claim->status === PurchaseStatus::Reserved) {
+            $this->release($claim);
+        }
+
+        $claim->purchasedBy->notify(new ClaimedItemRemoved($item, $reason, $claim->status));
+    }
+
+    /**
+     * The item's claim when it is still in play (reserved or bought) and its
+     * claimer can be reached, otherwise null.
+     */
+    private function activeClaim(WishlistItem $item): ?WishlistItemPurchase
+    {
+        $claim = $item->purchase()->with('purchasedBy')->first();
+
+        if ($claim === null || $claim->status === PurchaseStatus::Delivered) {
+            return null;
+        }
+
+        if ($claim->purchasedBy === null || $claim->purchasedBy->isDisabled()) {
+            return null;
+        }
+
+        return $claim;
     }
 }

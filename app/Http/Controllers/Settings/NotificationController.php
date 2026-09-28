@@ -22,6 +22,7 @@ class NotificationController extends Controller
             'preferences' => [
                 'notify_price_drops' => $user->notify_price_drops,
                 'notify_gift_purchases' => $user->notify_gift_purchases,
+                'notify_occasion_reminders' => $user->notify_occasion_reminders,
             ],
         ]);
     }
@@ -37,6 +38,7 @@ class NotificationController extends Controller
         // fillable list so sensitive columns (e.g. is_admin) can't be flipped.
         $user->notify_price_drops = $request->boolean('notify_price_drops');
         $user->notify_gift_purchases = $request->boolean('notify_gift_purchases');
+        $user->notify_occasion_reminders = $request->boolean('notify_occasion_reminders');
         $user->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Notification preferences updated.')]);

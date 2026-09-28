@@ -32,6 +32,7 @@ class DashboardController extends Controller
         // Recent items from OTHER users — purchase data is allowed here.
         $recentItems = WishlistItem::query()
             ->visible()
+            ->active()
             ->where('user_id', '!=', $user->id)
             ->with(['user', 'purchase.purchasedBy'])
             ->latest()

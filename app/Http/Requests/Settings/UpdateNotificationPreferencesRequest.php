@@ -25,6 +25,7 @@ class UpdateNotificationPreferencesRequest extends FormRequest
         return [
             'notify_price_drops' => ['required', 'boolean'],
             'notify_gift_purchases' => ['required', 'boolean'],
+            'notify_occasion_reminders' => ['required', 'boolean'],
         ];
     }
 }

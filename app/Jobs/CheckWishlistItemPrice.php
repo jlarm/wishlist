@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\RecordItemPrice;
+use App\Enums\Availability;
 use App\Enums\PurchaseStatus;
 use App\Models\User;
 use App\Models\WishlistItem;
@@ -13,6 +14,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Throwable;
@@ -46,6 +48,12 @@ class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
     public int $uniqueFor = 3600;
 
     /**
+     * Consecutive "page not found" checks before a link is flagged as broken,
+     * so a single hiccup on the store's side doesn't raise a false alarm.
+     */
+    public const BROKEN_LINK_THRESHOLD = 2;
+
+    /**
      * Create a new job instance.
      */
     public function __construct(public WishlistItem $wishlistItem) {}
@@ -71,7 +79,7 @@ class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * Scrape the item's product page and record the current price.
+     * Scrape the item's product page, record its stock state and current price.
      *
      * A price is only recorded when the scraper returns a usable number. When
      * the page is blocked or the price can't be found we leave the history
@@ -83,7 +91,11 @@ class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $price = $scraper->fetch($this->wishlistItem->url)['price'];
+        $page = $scraper->fetch($this->wishlistItem->url);
+
+        $this->recordAvailability($page['availability']);
+
+        $price = $page['price'];
 
         if ($price === null || ! is_numeric($price)) {
             return;
@@ -96,6 +108,33 @@ class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
         $recordPrice($this->wishlistItem, $price);
 
         $this->notifyOnPriceDrop($previousPrice, $price);
+    }
+
+    /**
+     * Track whether the link still leads to a buyable product. An unknown
+     * result (blocked, timed out, no stock markup) leaves the last state alone.
+     */
+    private function recordAvailability(?string $availability): void
+    {
+        $item = $this->wishlistItem;
+
+        if ($availability === null) {
+            return;
+        }
+
+        if ($availability === 'not_found') {
+            $item->link_failures = min($item->link_failures + 1, 255);
+
+            if ($item->link_failures >= self::BROKEN_LINK_THRESHOLD) {
+                $item->availability = Availability::Unavailable;
+            }
+        } else {
+            $item->link_failures = 0;
+            $item->availability = Availability::from($availability);
+        }
+
+        $item->availability_checked_at = Date::now();
+        $item->save();
     }
 
     /**

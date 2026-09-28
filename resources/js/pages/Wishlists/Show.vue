@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
+    ArrowUpDown,
+    CalendarHeart,
     Check,
     ChevronDown,
     Gift,
+    Inbox,
     Globe,
     LayoutGrid,
     Link2,
@@ -38,10 +41,13 @@ import {
 import { Input } from '@/components/ui/input';
 import WishlistItemCard from '@/components/WishlistItemCard.vue';
 import WishlistItemTable from '@/components/WishlistItemTable.vue';
+import WishlistReorderList from '@/components/WishlistReorderList.vue';
 import { useWindowedList } from '@/composables/useWindowedList';
+import { describeOccasion } from '@/lib/occasions';
+import { index as receivedIndex } from '@/routes/wishlist/received';
 import { create as createItem } from '@/routes/wishlist-items';
 import { show as wishlistShow } from '@/routes/wishlists';
-import type { WishlistItem } from '@/types';
+import type { NextOccasion, WishlistItem } from '@/types';
 
 const props = defineProps<{
     owner: {
@@ -49,6 +55,9 @@ const props = defineProps<{
         name: string;
         is_me: boolean;
         share_token: string | null;
+        next_occasion: NextOccasion | null;
+        // Owner only: how many gifts sit in their received archive.
+        received_count: number | null;
     };
     items: WishlistItem[];
     people: { id: number; name: string; is_me: boolean }[];
@@ -103,9 +112,11 @@ async function copyPublicLink() {
 }
 
 const search = ref('');
-const sortBy = ref<'priority' | 'newest' | 'price_asc' | 'price_desc'>(
-    'priority',
-);
+const sortBy = ref<
+    'ranked' | 'priority' | 'newest' | 'price_asc' | 'price_desc'
+>('ranked');
+// Owner-only drag-to-rank mode, replacing the grid while active.
+const reordering = ref(false);
 const priorityFilter = ref<string>('all');
 const tagFilter = ref<string>('all');
 const domainFilter = ref<string>('all');
@@ -201,6 +212,8 @@ const visibleItems = computed(() => {
 
     result.sort((a, b) => {
         switch (sortBy.value) {
+            case 'ranked':
+                return a.position - b.position;
             case 'newest':
                 return (b.created_at ?? '').localeCompare(a.created_at ?? '');
             case 'price_asc':
@@ -299,6 +312,13 @@ function copyWithFallback(text: string) {
                     <p class="mt-1 text-sm text-muted-foreground">
                         {{ items.length }}
                         {{ items.length === 1 ? 'wish' : 'wishes' }} on the list
+                    </p>
+                    <p
+                        v-if="owner.next_occasion"
+                        class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-gold/15 px-3 py-1 text-sm font-semibold text-gold"
+                    >
+                        <CalendarHeart class="size-4" />
+                        {{ describeOccasion(owner.next_occasion) }}
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -429,6 +449,17 @@ function copyWithFallback(text: string) {
                         </DialogContent>
                     </Dialog>
 
+                    <Button
+                        v-if="owner.is_me && owner.received_count"
+                        variant="outline"
+                        as-child
+                    >
+                        <Link :href="receivedIndex()">
+                            <Inbox class="size-4" />
+                            Received ({{ owner.received_count }})
+                        </Link>
+                    </Button>
+
                     <Button v-if="owner.is_me" as-child>
                         <Link :href="createItem()">
                             <Plus class="size-4" />
@@ -439,9 +470,16 @@ function copyWithFallback(text: string) {
             </div>
         </div>
 
+        <!-- Owner ranking mode -->
+        <WishlistReorderList
+            v-if="reordering"
+            :items="items"
+            @done="reordering = false"
+        />
+
         <!-- Controls -->
         <div
-            v-if="items.length"
+            v-if="items.length && !reordering"
             class="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-border bg-card p-3"
         >
             <div class="relative flex-1 sm:max-w-xs">
@@ -492,6 +530,9 @@ function copyWithFallback(text: string) {
                 </option>
             </select>
             <select v-model="sortBy" :class="selectClass" aria-label="Sort by">
+                <option value="ranked">
+                    Sort: {{ owner.is_me ? 'My ranking' : 'Their ranking' }}
+                </option>
                 <option value="priority">Sort: Priority</option>
                 <option value="newest">Sort: Newest</option>
                 <option value="price_asc">Sort: Price (low to high)</option>
@@ -507,9 +548,22 @@ function copyWithFallback(text: string) {
                 Hide purchased
             </label>
 
+            <Button
+                v-if="owner.is_me && items.length > 1"
+                type="button"
+                variant="outline"
+                size="sm"
+                class="ml-auto"
+                @click="reordering = true"
+            >
+                <ArrowUpDown class="size-4" />
+                Reorder
+            </Button>
+
             <!-- Card / table view toggle -->
             <div
-                class="ml-auto inline-flex rounded-md border border-input p-0.5"
+                :class="owner.is_me && items.length > 1 ? '' : 'ml-auto'"
+                class="inline-flex rounded-md border border-input p-0.5"
                 role="group"
                 aria-label="View mode"
             >
@@ -537,7 +591,8 @@ function copyWithFallback(text: string) {
         </div>
 
         <!-- Items -->
-        <template v-if="visibleItems.length">
+        <template v-if="reordering" />
+        <template v-else-if="visibleItems.length">
             <div
                 v-if="view === 'cards'"
                 class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"

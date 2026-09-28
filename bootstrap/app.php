@@ -24,6 +24,19 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->onOneServer()
             ->environments(['production']);
+
+        // Morning nudges: stale reservations, then upcoming occasions.
+        $schedule->command('reservations:remind')
+            ->dailyAt('09:00')
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->environments(['production']);
+
+        $schedule->command('occasions:remind')
+            ->dailyAt('09:15')
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->environments(['production']);
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // Cloudflare proxies every request, so honor its X-Forwarded-* headers.

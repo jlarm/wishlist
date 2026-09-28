@@ -46,6 +46,10 @@ class WishlistItemResource extends JsonResource
             'priority_weight' => $this->priority->weight(),
             'notes' => $this->notes,
             'visibility_status' => $this->visibility_status->value,
+            'position' => $this->position,
+            'is_received' => $this->received_at !== null,
+            'availability' => $this->availability?->value,
+            'availability_label' => $this->availability?->label(),
             'price_history' => $this->whenLoaded('priceHistories', fn () => $this->priceHistories
                 ->map(fn ($point): array => [
                     'price' => $point->price,
@@ -88,6 +92,11 @@ class WishlistItemResource extends JsonResource
                 'can_unmark' => $isMine,
                 'can_mark_bought' => $isMine && $this->purchase->status === PurchaseStatus::Reserved,
                 'can_mark_delivered' => $isMine && $this->purchase->status === PurchaseStatus::Purchased,
+                // A stale reservation we've nudged the claimer about.
+                'needs_confirmation' => $isMine
+                    && $this->purchase->status === PurchaseStatus::Reserved
+                    && $this->purchase->reminded_at !== null,
+                'can_confirm' => $isMine && $this->purchase->status === PurchaseStatus::Reserved,
             ] : null;
         }
 

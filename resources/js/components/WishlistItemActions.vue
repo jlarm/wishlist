@@ -2,6 +2,8 @@
 import { Link, router } from '@inertiajs/vue3';
 import { ExternalLink } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import ReceivedItemController from '@/actions/App/Http/Controllers/ReceivedItemController';
+import ReservationConfirmationController from '@/actions/App/Http/Controllers/ReservationConfirmationController';
 import WishlistItemController from '@/actions/App/Http/Controllers/WishlistItemController';
 import WishlistItemPurchaseController from '@/actions/App/Http/Controllers/WishlistItemPurchaseController';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
@@ -25,6 +27,7 @@ const hasClaimActions = computed(
         (props.item.can.purchase && !props.item.is_purchased) ||
         props.item.purchase?.can_mark_bought ||
         props.item.purchase?.can_mark_delivered ||
+        props.item.purchase?.needs_confirmation ||
         (props.item.is_purchased && props.item.purchase?.can_unmark),
 );
 
@@ -88,6 +91,29 @@ function release() {
     });
 }
 
+// Answer a stale-reservation reminder: "yes, I'm still getting this".
+function keepReservation() {
+    processing.value = true;
+    router.post(
+        ReservationConfirmationController.store(props.item.id).url,
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                processing.value = false;
+            },
+        },
+    );
+}
+
+function markReceived() {
+    router.post(
+        ReceivedItemController.store(props.item.id).url,
+        {},
+        { preserveScroll: true },
+    );
+}
+
 function deleteItem() {
     router.delete(WishlistItemController.destroy(props.item.id).url, {
         preserveScroll: true,
@@ -126,6 +152,20 @@ function deleteItem() {
                     Edit
                 </Link>
             </Button>
+
+            <ConfirmDialog
+                v-if="item.can.update && !item.is_received"
+                title="Got this one?"
+                :description="`“${item.title}” will move to your received gifts and come off your list for everyone.`"
+                confirm-label="Mark received"
+                @confirm="markReceived"
+            >
+                <template #trigger>
+                    <Button variant="ghost" size="sm" class="rounded-none">
+                        Received
+                    </Button>
+                </template>
+            </ConfirmDialog>
 
             <ConfirmDialog
                 v-if="item.can.delete"
@@ -180,6 +220,18 @@ function deleteItem() {
                 @click="buyOutright"
             >
                 Mark as bought
+            </Button>
+
+            <!-- Reply to the stale-reservation reminder email -->
+            <Button
+                v-if="item.purchase?.needs_confirmation"
+                variant="ghost"
+                size="sm"
+                class="rounded-none"
+                :disabled="processing"
+                @click="keepReservation"
+            >
+                Keep it
             </Button>
 
             <Button

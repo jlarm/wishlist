@@ -24,6 +24,7 @@ test('notification preferences can be updated', function () {
         ->patch(route('notifications.update'), [
             'notify_price_drops' => false,
             'notify_gift_purchases' => true,
+            'notify_occasion_reminders' => false,
         ])
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('notifications.edit'));
@@ -32,6 +33,7 @@ test('notification preferences can be updated', function () {
 
     expect($user->notify_price_drops)->toBeFalse();
     expect($user->notify_gift_purchases)->toBeTrue();
+    expect($user->notify_occasion_reminders)->toBeFalse();
 });
 
 test('both preferences are required booleans', function () {
@@ -39,7 +41,7 @@ test('both preferences are required booleans', function () {
 
     $this->actingAs($user)
         ->patch(route('notifications.update'), ['notify_price_drops' => 'yes'])
-        ->assertSessionHasErrors(['notify_price_drops', 'notify_gift_purchases']);
+        ->assertSessionHasErrors(['notify_price_drops', 'notify_gift_purchases', 'notify_occasion_reminders']);
 });
 
 test('price-drop emails are suppressed when the recipient opts out', function () {

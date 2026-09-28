@@ -3,12 +3,17 @@
 use App\Http\Controllers\Admin\InvitationController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GiftController;
 use App\Http\Controllers\InvitationAcceptanceController;
 use App\Http\Controllers\ProductMetadataController;
 use App\Http\Controllers\PublicWishlistController;
+use App\Http\Controllers\ReceivedItemController;
+use App\Http\Controllers\ReservationConfirmationController;
+use App\Http\Controllers\ThankYouController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\WishlistItemController;
 use App\Http\Controllers\WishlistItemPurchaseController;
+use App\Http\Controllers\WishlistOrderController;
 use App\Http\Controllers\WishlistShareController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +55,9 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
 
     Route::get('wishlists', [WishlistController::class, 'index'])->name('wishlists.index');
 
+    // Everything the viewer has claimed for other people.
+    Route::get('gifts', [GiftController::class, 'index'])->name('gifts.index');
+
     // Item routes are declared before the {user} wildcard so they are not
     // shadowed by the wishlist show route.
     Route::post('wishlist-items/metadata', ProductMetadataController::class)
@@ -65,9 +73,18 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
     Route::post('wishlist/share', [WishlistShareController::class, 'store'])->name('wishlist.share.store');
     Route::delete('wishlist/share', [WishlistShareController::class, 'destroy'])->name('wishlist.share.destroy');
 
+    // The owner's ranking and their archive of received gifts.
+    Route::put('wishlist/order', [WishlistOrderController::class, 'update'])->name('wishlist.order.update');
+    Route::get('wishlist/received', [ReceivedItemController::class, 'index'])->name('wishlist.received.index');
+    Route::post('wishlist-items/{wishlistItem}/received', [ReceivedItemController::class, 'store'])->name('wishlist-items.received.store');
+    Route::delete('wishlist-items/{wishlistItem}/received', [ReceivedItemController::class, 'destroy'])->name('wishlist-items.received.destroy');
+    Route::post('wishlist-items/{wishlistItem}/thanked', [ThankYouController::class, 'store'])->name('wishlist-items.thanked.store');
+    Route::delete('wishlist-items/{wishlistItem}/thanked', [ThankYouController::class, 'destroy'])->name('wishlist-items.thanked.destroy');
+
     Route::post('wishlist-items/{wishlistItem}/purchase', [WishlistItemPurchaseController::class, 'store'])->name('wishlist-items.purchase.store');
     Route::patch('wishlist-items/{wishlistItem}/purchase', [WishlistItemPurchaseController::class, 'update'])->name('wishlist-items.purchase.update');
     Route::delete('wishlist-items/{wishlistItem}/purchase', [WishlistItemPurchaseController::class, 'destroy'])->name('wishlist-items.purchase.destroy');
+    Route::post('wishlist-items/{wishlistItem}/purchase/confirm', [ReservationConfirmationController::class, 'store'])->name('wishlist-items.purchase.confirm');
 
     Route::get('wishlists/{user}', [WishlistController::class, 'show'])->name('wishlists.show');
 

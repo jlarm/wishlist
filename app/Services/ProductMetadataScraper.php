@@ -26,17 +26,27 @@ class ProductMetadataScraper
      * or without usable metadata, it falls back to the ScrapingBee proxy if an
      * API key is configured. Always returns a normalised shape; it never throws.
      *
-     * @return array{title: ?string, description: ?string, price: ?string, images: list<string>}
+     * "availability" is "in_stock" or "out_of_stock" when the page says so,
+     * "not_found" when the store answers 404/410 (the product is gone), and
+     * null when we can't tell (blocked, network error, no stock markup).
+     *
+     * @return array{title: ?string, description: ?string, price: ?string, images: list<string>, availability: ?string}
      */
     public function fetch(string $url): array
     {
-        $empty = ['title' => null, 'description' => null, 'price' => null, 'images' => []];
+        $empty = ['title' => null, 'description' => null, 'price' => null, 'images' => [], 'availability' => null];
 
         if (! $this->isSafeUrl($url)) {
             return $empty;
         }
 
-        $result = $this->parseOrEmpty($this->fetchDirect($url), $url);
+        $status = null;
+        $result = $this->parseOrEmpty($this->fetchDirect($url, $status), $url);
+
+        // The store says the page is gone — no point paying the proxy to agree.
+        if (in_array($status, [404, 410], true)) {
+            return [...$empty, 'availability' => 'not_found'];
+        }
 
         // Big retailers (Amazon, Walmart, etc.) block direct server requests,
         // so retry through the proxy only when the cheap path found nothing.
@@ -55,11 +65,11 @@ class ProductMetadataScraper
      * Parse the HTML, returning an empty payload when it is missing or the page
      * is a bot-detection challenge rather than the real product page.
      *
-     * @return array{title: ?string, description: ?string, price: ?string, images: list<string>}
+     * @return array{title: ?string, description: ?string, price: ?string, images: list<string>, availability: ?string}
      */
     private function parseOrEmpty(?string $html, string $url): array
     {
-        $empty = ['title' => null, 'description' => null, 'price' => null, 'images' => []];
+        $empty = ['title' => null, 'description' => null, 'price' => null, 'images' => [], 'availability' => null];
 
         if ($html === null) {
             return $empty;
@@ -73,7 +83,7 @@ class ProductMetadataScraper
     /**
      * Detect bot-wall / captcha pages so their junk titles never leak through.
      *
-     * @param  array{title: ?string, description: ?string, price: ?string, images: list<string>}  $result
+     * @param  array{title: ?string, description: ?string, price: ?string, images: list<string>, availability: ?string}  $result
      */
     private function looksBlocked(array $result): bool
     {
@@ -109,8 +119,10 @@ class ProductMetadataScraper
      * Redirects are followed manually so every hop is re-checked against the
      * SSRF guard — Laravel's HTTP client would otherwise auto-follow a public
      * URL straight to an internal host (cloud metadata, localhost, etc.).
+     *
+     * @param  int|null  $status  Set to the final response's HTTP status, if any.
      */
-    private function fetchDirect(string $url): ?string
+    private function fetchDirect(string $url, ?int &$status = null): ?string
     {
         for ($hop = 0; $hop <= self::MAX_REDIRECTS; $hop++) {
             if (! $this->isSafeUrl($url)) {
@@ -143,6 +155,8 @@ class ProductMetadataScraper
 
                 continue;
             }
+
+            $status = $response->status();
 
             if (! $response->successful() || ! Str::contains($response->header('Content-Type'), 'html')) {
                 return null;
@@ -189,7 +203,7 @@ class ProductMetadataScraper
     /**
      * Whether a parsed result carries no usable metadata.
      *
-     * @param  array{title: ?string, description: ?string, price: ?string, images: list<string>}  $result
+     * @param  array{title: ?string, description: ?string, price: ?string, images: list<string>, availability: ?string}  $result
      */
     private function isEmpty(array $result): bool
     {
@@ -199,7 +213,7 @@ class ProductMetadataScraper
     /**
      * Parse the HTML body into normalised metadata.
      *
-     * @return array{title: ?string, description: ?string, price: ?string, images: list<string>}
+     * @return array{title: ?string, description: ?string, price: ?string, images: list<string>, availability: ?string}
      */
     private function parse(string $html, string $baseUrl): array
     {
@@ -230,7 +244,43 @@ class ProductMetadataScraper
             'description' => $this->clean($description),
             'price' => $this->cleanPrice($price),
             'images' => $this->collectImages($document, $meta, $baseUrl),
+            'availability' => $this->detectAvailability($html, $meta),
         ];
+    }
+
+    /**
+     * Read stock state from Open Graph / product meta tags or schema.org markup.
+     *
+     * A page listing several variants is only treated as out of stock when
+     * every availability it declares is a sold-out one, so one missing size
+     * doesn't flag the whole product.
+     *
+     * @param  array<string, string>  $meta
+     */
+    private function detectAvailability(string $html, array $meta): ?string
+    {
+        $values = array_filter([
+            $meta['og:availability'] ?? null,
+            $meta['product:availability'] ?? null,
+            $meta['availability'] ?? null,
+        ]);
+
+        preg_match_all('~"availability"\s*:\s*"([^"]+)"~i', $html, $jsonLd);
+        preg_match_all('~itemprop=["\']availability["\'][^>]*href=["\']([^"\']+)["\']~i', $html, $microdata);
+
+        $values = [...$values, ...$jsonLd[1], ...$microdata[1]];
+
+        if ($values === []) {
+            return null;
+        }
+
+        $soldOut = array_filter($values, function (string $value): bool {
+            $normalized = Str::of($value)->afterLast('/')->lower()->replace([' ', '_', '-'], '')->toString();
+
+            return in_array($normalized, ['outofstock', 'oos', 'soldout', 'discontinued'], true);
+        });
+
+        return count($soldOut) === count($values) ? 'out_of_stock' : 'in_stock';
     }
 
     /**

@@ -1,13 +1,30 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import { Bookmark, ChevronDown, Smartphone } from '@lucide/vue';
+import { computed } from 'vue';
 import { store } from '@/actions/App/Http/Controllers/WishlistItemController';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import WishlistItemForm from '@/components/WishlistItemForm.vue';
+import { create } from '@/routes/wishlist-items';
 import type { SelectOption } from '@/types';
 
-defineProps<{
+const props = defineProps<{
     priorities: SelectOption[];
     visibilities: SelectOption[];
+    // A link handed over by the bookmarklet or the phone's share sheet.
+    prefill: { url: string; title: string | null } | null;
 }>();
+
+// Opens this page with the current tab's URL and title from any site.
+const bookmarklet = computed(() => {
+    const target = new URL(create().url, window.location.origin).href;
+
+    return `javascript:(()=>{location.href='${target}?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title)})()`;
+});
 </script>
 
 <template>
@@ -38,7 +55,55 @@ defineProps<{
                 :submit-url="store().url"
                 method="post"
                 submit-label="Add to my list"
+                :initial="
+                    props.prefill ? { url: props.prefill.url } : undefined
+                "
+                :auto-fetch="!!props.prefill"
+                :fallback-title="props.prefill?.title"
             />
         </div>
+
+        <!-- Quick-add shortcuts -->
+        <Collapsible
+            class="rounded-3xl border-2 border-border bg-card px-6 py-4"
+        >
+            <CollapsibleTrigger
+                class="group flex w-full items-center justify-between text-left text-sm font-medium"
+            >
+                Add wishes straight from any store
+                <ChevronDown
+                    class="size-4 transition group-data-[state=open]:rotate-180"
+                />
+            </CollapsibleTrigger>
+            <CollapsibleContent class="mt-4 grid gap-4 text-sm">
+                <div class="flex gap-3">
+                    <Bookmark class="mt-0.5 size-4 shrink-0 text-gold" />
+                    <div class="grid gap-2">
+                        <p>
+                            <span class="font-medium">On a computer:</span>
+                            drag this button to your bookmarks bar. On any
+                            product page, click it to add that page here.
+                        </p>
+                        <a
+                            :href="bookmarklet"
+                            class="inline-flex w-fit items-center gap-1.5 rounded-full bg-holly px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
+                            @click.prevent
+                        >
+                            <Bookmark class="size-3.5" />
+                            + Wishlist
+                        </a>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <Smartphone class="mt-0.5 size-4 shrink-0 text-gold" />
+                    <p>
+                        <span class="font-medium">On Android:</span> open this
+                        site in Chrome and choose <em>Add to Home screen</em>.
+                        After that, Wishlist shows up in the Share menu of any
+                        shopping app or browser.
+                    </p>
+                </div>
+            </CollapsibleContent>
+        </Collapsible>
     </div>
 </template>

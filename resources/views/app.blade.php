@@ -33,6 +33,9 @@
         <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
         <link rel="icon" href="/favicon.ico?v=2" sizes="any">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+        {{-- Installable on phones, and a Share-menu target for adding wishes --}}
+        <link rel="manifest" href="/manifest.webmanifest">
+        <meta name="theme-color" content="#1d583b">
 
         @fonts
 

@@ -9,7 +9,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('prices:check')]
-#[Description('Queue a price check for every wishlist item that has a product URL.')]
+#[Description('Queue a price and link check for every wishlist item still on a list that has a product URL.')]
 class CheckWishlistItemPrices extends Command
 {
     /**
@@ -21,6 +21,7 @@ class CheckWishlistItemPrices extends Command
 
         WishlistItem::query()
             ->whereNotNull('url')
+            ->active()
             ->chunkById(200, function ($items) use (&$dispatched): void {
                 foreach ($items as $item) {
                     CheckWishlistItemPrice::dispatch($item);

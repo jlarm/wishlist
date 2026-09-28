@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\Availability;
 use App\Enums\Priority;
 use App\Enums\VisibilityStatus;
+use Carbon\CarbonImmutable;
 use Database\Factories\WishlistItemFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -27,8 +29,14 @@ use Illuminate\Support\Carbon;
  * @property string|null $color
  * @property list<string> $tags
  * @property Priority $priority
+ * @property int $position
  * @property string|null $notes
  * @property VisibilityStatus $visibility_status
+ * @property CarbonImmutable|null $received_at
+ * @property CarbonImmutable|null $thanked_at
+ * @property Availability|null $availability
+ * @property int $link_failures
+ * @property CarbonImmutable|null $availability_checked_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -79,6 +87,12 @@ class WishlistItem extends Model
             'price' => 'decimal:2',
             'priority' => Priority::class,
             'visibility_status' => VisibilityStatus::class,
+            'position' => 'integer',
+            'received_at' => 'datetime',
+            'thanked_at' => 'datetime',
+            'availability' => Availability::class,
+            'link_failures' => 'integer',
+            'availability_checked_at' => 'datetime',
         ];
     }
 
@@ -172,5 +186,43 @@ class WishlistItem extends Model
     public function scopeVisible(Builder $query): void
     {
         $query->where('visibility_status', VisibilityStatus::Visible);
+    }
+
+    /**
+     * Scope a query to items still on the list (not yet received).
+     *
+     * @param  Builder<WishlistItem>  $query
+     */
+    public function scopeActive(Builder $query): void
+    {
+        $query->whereNull('received_at');
+    }
+
+    /**
+     * Scope a query to items the owner has archived as received.
+     *
+     * @param  Builder<WishlistItem>  $query
+     */
+    public function scopeReceived(Builder $query): void
+    {
+        $query->whereNotNull('received_at');
+    }
+
+    /**
+     * Scope a query to the owner's hand-picked ranking.
+     *
+     * @param  Builder<WishlistItem>  $query
+     */
+    public function scopeRanked(Builder $query): void
+    {
+        $query->orderBy('position')->latest();
+    }
+
+    /**
+     * Determine if the owner has archived the item as received.
+     */
+    public function isReceived(): bool
+    {
+        return $this->received_at !== null;
     }
 }

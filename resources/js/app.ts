@@ -23,6 +23,7 @@ createInertiaApp({
             // Everyone manages their list from the festive front-end shell.
             case name.startsWith('Wishlists/'):
             case name.startsWith('WishlistItems/'):
+            case name.startsWith('Gifts/'):
                 return FrontendLayout;
             // Dashboard and Admin/* keep the admin sidebar.
             default:

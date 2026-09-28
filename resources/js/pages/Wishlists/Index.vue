@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ChevronRight, Gift } from '@lucide/vue';
+import { CalendarHeart, ChevronRight, Gift } from '@lucide/vue';
+import { describeOccasion } from '@/lib/occasions';
 import { show as wishlistShow } from '@/routes/wishlists';
 import type { WishlistUserSummary } from '@/types';
 
@@ -60,6 +61,13 @@ defineProps<{
                                     ? 'wish'
                                     : 'wishes'
                             }}
+                        </p>
+                        <p
+                            v-if="user.next_occasion"
+                            class="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-gold"
+                        >
+                            <CalendarHeart class="size-3.5" />
+                            {{ describeOccasion(user.next_occasion) }}
                         </p>
                     </div>
                 </div>

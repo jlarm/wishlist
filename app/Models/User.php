@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property bool $is_admin
  * @property bool $notify_price_drops
  * @property bool $notify_gift_purchases
+ * @property bool $notify_occasion_reminders
  * @property CarbonImmutable|null $disabled_at
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -47,6 +48,7 @@ class User extends Authenticatable
     protected $attributes = [
         'notify_price_drops' => true,
         'notify_gift_purchases' => true,
+        'notify_occasion_reminders' => true,
     ];
 
     /**
@@ -62,6 +64,7 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'notify_price_drops' => 'boolean',
             'notify_gift_purchases' => 'boolean',
+            'notify_occasion_reminders' => 'boolean',
             'disabled_at' => 'datetime',
         ];
     }
@@ -74,6 +77,37 @@ class User extends Authenticatable
     public function wishlistItems(): HasMany
     {
         return $this->hasMany(WishlistItem::class);
+    }
+
+    /**
+     * The dates the user's wishlist is building towards (birthday, Christmas…).
+     *
+     * @return HasMany<Occasion, $this>
+     */
+    public function occasions(): HasMany
+    {
+        return $this->hasMany(Occasion::class);
+    }
+
+    /**
+     * The user's soonest upcoming occasion with its date, or null when none.
+     *
+     * @return array{name: string, date: string, days_until: int}|null
+     */
+    public function nextOccasion(): ?array
+    {
+        $today = now()->startOfDay();
+
+        return $this->occasions
+            ->map(fn (Occasion $occasion): array => [$occasion, $occasion->nextOccurrence($today)])
+            ->filter(fn (array $pair): bool => $pair[1] !== null)
+            ->sortBy(fn (array $pair): int => $pair[1]->getTimestamp())
+            ->map(fn (array $pair): array => [
+                'name' => $pair[0]->name,
+                'date' => $pair[1]->toDateString(),
+                'days_until' => (int) $today->diffInDays($pair[1]),
+            ])
+            ->first();
     }
 
     /**

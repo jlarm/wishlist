@@ -26,8 +26,9 @@ class PublicWishlistController extends Controller
 
         $items = $owner->wishlistItems()
             ->visible()
+            ->active()
+            ->ranked()
             ->with(['priceHistories' => fn ($query) => $query->where('recorded_at', '>=', now()->subDays(90))])
-            ->latest()
             ->get();
 
         // Resolve items as a guest regardless of who is viewing, so the page is

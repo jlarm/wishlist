@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\PurchaseStatus;
+use Carbon\CarbonImmutable;
 use Database\Factories\WishlistItemPurchaseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +16,8 @@ use Illuminate\Support\Carbon;
  * @property int $purchased_by_user_id
  * @property PurchaseStatus $status
  * @property Carbon $purchased_at
+ * @property CarbonImmutable|null $confirmed_at
+ * @property CarbonImmutable|null $reminded_at
  * @property string|null $note
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -34,6 +37,8 @@ class WishlistItemPurchase extends Model
         'purchased_by_user_id',
         'status',
         'purchased_at',
+        'confirmed_at',
+        'reminded_at',
         'note',
     ];
 
@@ -56,6 +61,8 @@ class WishlistItemPurchase extends Model
         return [
             'status' => PurchaseStatus::class,
             'purchased_at' => 'datetime',
+            'confirmed_at' => 'datetime',
+            'reminded_at' => 'datetime',
         ];
     }
 

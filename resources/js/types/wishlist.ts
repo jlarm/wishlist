@@ -12,6 +12,9 @@ export type PurchaseInfo = {
     can_unmark: boolean;
     can_mark_bought: boolean;
     can_mark_delivered: boolean;
+    // A stale reservation we've emailed the claimer about.
+    needs_confirmation: boolean;
+    can_confirm: boolean;
 };
 
 export type PricePoint = {
@@ -36,6 +39,10 @@ export type WishlistItem = {
     priority_weight: number;
     notes: string | null;
     visibility_status: string;
+    position: number;
+    is_received: boolean;
+    availability: 'in_stock' | 'out_of_stock' | 'unavailable' | null;
+    availability_label: string | null;
     price_history?: PricePoint[];
     is_owner: boolean;
     created_at: string | null;
@@ -50,10 +57,17 @@ export type WishlistItem = {
     purchase?: PurchaseInfo | null;
 };
 
+export type NextOccasion = {
+    name: string;
+    date: string;
+    days_until: number;
+};
+
 export type WishlistUserSummary = {
     id: number;
     name: string;
     is_admin: boolean;
     is_me: boolean;
     wishlist_items_count: number;
+    next_occasion: NextOccasion | null;
 };

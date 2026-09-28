@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Tag } from '@lucide/vue';
+import { Check, Tag, TriangleAlert } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PriceHistoryChart from '@/components/PriceHistoryChart.vue';
 import WishlistItemActions from '@/components/WishlistItemActions.vue';
@@ -126,6 +126,18 @@ const claimByline = computed(() => {
                 class="absolute top-2 right-2 rounded-full bg-background/85 px-2 py-0.5 text-xs font-medium text-muted-foreground backdrop-blur"
             >
                 Hidden
+            </span>
+
+            <!-- Nightly link check found a problem -->
+            <span
+                v-if="
+                    item.availability === 'out_of_stock' ||
+                    item.availability === 'unavailable'
+                "
+                class="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-0.5 text-xs font-semibold text-cranberry backdrop-blur"
+            >
+                <TriangleAlert class="size-3" />
+                {{ item.availability_label }}
             </span>
         </div>
 

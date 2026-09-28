@@ -12,13 +12,14 @@ class GetWishlistDirectory
      * shaped for the frontend. Shared by the wishlist index and the admin
      * dashboard so the privacy-sensitive visible-only count is defined once.
      *
-     * @return Collection<int, array{id: int, name: string, is_admin: bool, is_me: bool, wishlist_items_count: int<0, max>}>
+     * @return Collection<int, array{id: int, name: string, is_admin: bool, is_me: bool, wishlist_items_count: int<0, max>, next_occasion: array{name: string, date: string, days_until: int}|null}>
      */
     public function __invoke(User $viewer): Collection
     {
         return User::query()
             ->whereNull('disabled_at')
-            ->withCount(['wishlistItems' => fn ($query) => $query->visible()])
+            ->withCount(['wishlistItems' => fn ($query) => $query->visible()->active()])
+            ->with('occasions')
             ->orderBy('name')
             ->get()
             ->map(fn (User $user): array => [
@@ -27,6 +28,7 @@ class GetWishlistDirectory
                 'is_admin' => $user->is_admin,
                 'is_me' => $user->id === $viewer->id,
                 'wishlist_items_count' => $user->wishlist_items_count,
+                'next_occasion' => $user->nextOccasion(),
             ]);
     }
 }

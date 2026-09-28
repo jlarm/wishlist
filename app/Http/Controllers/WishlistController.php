@@ -33,7 +33,8 @@ class WishlistController extends Controller
         // their wishlist unreachable by direct URL too.
         abort_if($user->isDisabled(), 404);
 
-        $query = $user->wishlistItems();
+        // Received gifts live in the owner's archive, not on the list.
+        $query = $user->wishlistItems()->active()->ranked();
 
         // The chart is a recent-trend sparkline, so only hydrate the last few
         // months of points instead of the item's entire history — otherwise the
@@ -45,14 +46,12 @@ class WishlistController extends Controller
             // NEVER any purchase data — the relationship is not even loaded.
             $items = $query
                 ->with($recentHistory)
-                ->latest()
                 ->get();
         } else {
             // Other viewers only see visible items, with purchase data attached.
             $items = $query
                 ->visible()
                 ->with(['purchase.purchasedBy', ...$recentHistory])
-                ->latest()
                 ->get();
         }
 
@@ -75,6 +74,8 @@ class WishlistController extends Controller
                 'is_me' => $isOwnWishlist,
                 // Only the owner manages their own public link.
                 'share_token' => $isOwnWishlist ? $user->share_token : null,
+                'next_occasion' => $user->nextOccasion(),
+                'received_count' => $isOwnWishlist ? $user->wishlistItems()->received()->count() : null,
             ],
             'items' => WishlistItemResource::collection($items)->resolve(),
             'people' => $people,

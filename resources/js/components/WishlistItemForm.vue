@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useForm, useHttp } from '@inertiajs/vue3';
 import { Check, ImageOff, Sparkles, TriangleAlert, X } from '@lucide/vue';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import ProductMetadataController from '@/actions/App/Http/Controllers/ProductMetadataController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,10 @@ const props = defineProps<{
     method: 'post' | 'put';
     submitLabel: string;
     initial?: Partial<WishlistItemFormData>;
+    // Arrived from the share sheet / bookmarklet: fetch the link straight away.
+    autoFetch?: boolean;
+    // The shared page's title, used only if fetching can't find a better one.
+    fallbackTitle?: string | null;
 }>();
 
 const form = useForm<WishlistItemFormData>({
@@ -76,16 +80,16 @@ const metadata = useHttp<{ url: string }>({ url: '' });
 const selectClass =
     'border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px]';
 
-function fetchMetadata() {
+function fetchMetadata(): Promise<unknown> {
     if (!form.url) {
-        return;
+        return Promise.resolve();
     }
 
     fetchError.value = null;
     fetchSuccess.value = null;
     metadata.url = form.url;
 
-    metadata
+    return metadata
         .post(ProductMetadataController.url(), {
             onSuccess: (response: unknown) => {
                 const data = response as ProductMetadata;
@@ -144,6 +148,19 @@ function fetchMetadata() {
             // non-422 failures, so swallow it to avoid an unhandled rejection.
         });
 }
+
+onMounted(() => {
+    if (!props.autoFetch || !form.url) {
+        return;
+    }
+
+    fetchDialogOpen.value = true;
+    fetchMetadata().finally(() => {
+        if (!form.title && props.fallbackTitle) {
+            form.title = props.fallbackTitle;
+        }
+    });
+});
 
 function addTag() {
     const tag = tagInput.value.trim();

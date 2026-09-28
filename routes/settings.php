@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Settings\NotificationController;
+use App\Http\Controllers\Settings\OccasionController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +14,10 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('settings/notifications', [NotificationController::class, 'edit'])->name('notifications.edit');
     Route::patch('settings/notifications', [NotificationController::class, 'update'])->name('notifications.update');
+
+    Route::get('settings/occasions', [OccasionController::class, 'edit'])->name('occasions.edit');
+    Route::post('settings/occasions', [OccasionController::class, 'store'])->name('occasions.store');
+    Route::delete('settings/occasions/{occasion}', [OccasionController::class, 'destroy'])->name('occasions.destroy');
 });
 
 Route::middleware(['auth', 'verified', 'active'])->group(function () {

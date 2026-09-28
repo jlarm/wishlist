@@ -93,6 +93,15 @@ function claimTooltip(item: WishlistItem): string {
                                     {{ item.title }}
                                 </p>
                                 <p
+                                    v-if="
+                                        item.availability === 'out_of_stock' ||
+                                        item.availability === 'unavailable'
+                                    "
+                                    class="truncate text-xs font-semibold text-cranberry"
+                                >
+                                    {{ item.availability_label }}
+                                </p>
+                                <p
                                     v-if="showOwner && item.owner_name"
                                     class="truncate text-xs text-muted-foreground"
                                 >

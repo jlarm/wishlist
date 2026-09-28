@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Gift, LayoutDashboard, Sparkles, TreePine, Users } from '@lucide/vue';
+import {
+    Gift,
+    LayoutDashboard,
+    ShoppingBag,
+    Sparkles,
+    TreePine,
+    Users,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import Snowfall from '@/components/Snowfall.vue';
 import {
@@ -13,6 +20,7 @@ import UserMenuContent from '@/components/UserMenuContent.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { useInitials } from '@/composables/useInitials';
 import { dashboard } from '@/routes';
+import { index as giftsIndex } from '@/routes/gifts';
 import {
     index as wishlistsIndex,
     show as wishlistShow,
@@ -83,6 +91,18 @@ const navLink =
                     >
                         <Users class="size-4" />
                         <span class="hidden sm:inline">Everyone</span>
+                    </Link>
+                    <Link
+                        :href="giftsIndex()"
+                        :class="[
+                            navLink,
+                            isCurrentUrl(giftsIndex().url)
+                                ? 'bg-white/15 text-white'
+                                : 'text-white/70',
+                        ]"
+                    >
+                        <ShoppingBag class="size-4" />
+                        <span class="hidden sm:inline">My gifts</span>
                     </Link>
                     <Link
                         v-if="isAdmin"
