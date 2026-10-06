@@ -110,42 +110,49 @@ const claimByline = computed(() => {
     <div
         class="group relative flex flex-col rounded-2xl border-2 border-border bg-card p-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
     >
-        <!-- Image -->
+        <!-- Image + title: a thumbnail beside the title on phones, a full-width banner from sm up -->
         <div
-            class="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-muted"
+            class="flex items-start gap-3 sm:flex-col sm:items-stretch sm:gap-0"
         >
-            <img
-                :src="displayImage"
-                :alt="item.title"
-                class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                @error="imageFailed = true"
-            />
-
-            <span
-                v-if="item.visibility_status === 'hidden'"
-                class="absolute top-2 right-2 rounded-full bg-background/85 px-2 py-0.5 text-xs font-medium text-muted-foreground backdrop-blur"
+            <div
+                class="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted sm:aspect-video sm:size-auto sm:w-full"
             >
-                Hidden
-            </span>
+                <img
+                    :src="displayImage"
+                    :alt="item.title"
+                    class="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                    @error="imageFailed = true"
+                />
 
-            <!-- Nightly link check found a problem -->
-            <span
-                v-if="
-                    item.availability === 'out_of_stock' ||
-                    item.availability === 'unavailable'
-                "
-                class="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-0.5 text-xs font-semibold text-cranberry backdrop-blur"
+                <span
+                    v-if="item.visibility_status === 'hidden'"
+                    class="absolute top-1 right-1 rounded-full bg-background/85 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground backdrop-blur sm:top-2 sm:right-2 sm:px-2 sm:text-xs"
+                >
+                    Hidden
+                </span>
+
+                <!-- Nightly link check found a problem -->
+                <span
+                    v-if="
+                        item.availability === 'out_of_stock' ||
+                        item.availability === 'unavailable'
+                    "
+                    class="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-full bg-background/90 px-1.5 py-0.5 text-xs font-semibold text-cranberry backdrop-blur sm:bottom-2 sm:left-2 sm:px-2"
+                    :title="item.availability_label ?? undefined"
+                >
+                    <TriangleAlert class="size-3" />
+                    <span class="sr-only sm:not-sr-only">
+                        {{ item.availability_label }}
+                    </span>
+                </span>
+            </div>
+
+            <div
+                class="flex min-w-0 flex-1 items-start justify-between gap-2 sm:px-1 sm:pt-3"
             >
-                <TriangleAlert class="size-3" />
-                {{ item.availability_label }}
-            </span>
-        </div>
-
-        <div class="flex flex-1 flex-col gap-3 px-1 pt-3">
-            <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
                     <h3
-                        class="truncate font-display text-lg leading-tight font-semibold"
+                        class="line-clamp-2 font-display text-lg leading-tight font-semibold sm:truncate"
                     >
                         {{ item.title }}
                     </h3>
@@ -163,7 +170,9 @@ const claimByline = computed(() => {
                     {{ formattedPrice }}
                 </span>
             </div>
+        </div>
 
+        <div class="flex flex-1 flex-col gap-3 px-1 pt-3">
             <!-- Priority + size + color, as little kraft tags -->
             <div class="flex flex-wrap gap-1.5 text-xs">
                 <span
