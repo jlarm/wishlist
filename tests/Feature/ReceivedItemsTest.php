@@ -48,7 +48,7 @@ test('a reservation on a received item is released and its claimer told', functi
     );
 });
 
-test('the archive reveals who gave a bought gift', function () {
+test('the archive never reveals who gave a gift', function () {
     $owner = User::factory()->create();
     $giver = User::factory()->create(['name' => 'Aunt May']);
     $item = WishlistItem::factory()->for($owner)->create();
@@ -64,7 +64,7 @@ test('the archive reveals who gave a bought gift', function () {
         ->assertInertia(fn ($page) => $page
             ->component('Wishlists/Received')
             ->where('items.0.id', $item->id)
-            ->where('items.0.given_by', 'Aunt May'));
+            ->missing('items.0.given_by'));
 });
 
 test('the archive only lists the viewer\'s own received items', function () {

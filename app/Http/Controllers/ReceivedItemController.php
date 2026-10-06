@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ClaimRemovalReason;
-use App\Enums\PurchaseStatus;
 use App\Models\WishlistItem;
 use App\Services\PurchaseService;
 use Illuminate\Http\RedirectResponse;
@@ -19,16 +18,15 @@ class ReceivedItemController extends Controller
     /**
      * Show the owner's archive of gifts they've received.
      *
-     * This is the one place an owner learns who gave them something, and only
-     * for items they've already marked received and that a giver had actually
-     * bought — a bare reservation is never revealed.
+     * Like everywhere else, it never says who gave what: the archive could
+     * otherwise be used to unmask a giver by marking an item received and then
+     * putting it back.
      */
     public function index(Request $request): Response
     {
         $items = $request->user()
             ->wishlistItems()
             ->received()
-            ->with('purchase.purchasedBy')
             ->latest('received_at')
             ->get()
             ->map(fn (WishlistItem $item): array => [
@@ -39,9 +37,6 @@ class ReceivedItemController extends Controller
                 'price' => $item->price,
                 'received_at' => $item->received_at?->toIso8601String(),
                 'thanked_at' => $item->thanked_at?->toIso8601String(),
-                'given_by' => $item->purchase !== null && $item->purchase->status !== PurchaseStatus::Reserved
-                    ? $item->purchase->purchasedBy?->name
-                    : null,
             ]);
 
         return Inertia::render('Wishlists/Received', [

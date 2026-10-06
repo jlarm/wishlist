@@ -19,7 +19,6 @@ type ReceivedItem = {
     received_at: string | null;
     thanked_at: string | null;
     // Only set when a giver had actually bought it — never for a reservation.
-    given_by: string | null;
 };
 
 const props = defineProps<{
@@ -96,13 +95,6 @@ function formatDate(value: string | null): string {
                     <div class="min-w-0">
                         <p class="truncate font-medium">{{ item.title }}</p>
                         <p class="text-xs text-muted-foreground">
-                            <template v-if="item.given_by">
-                                From
-                                <span class="font-semibold text-foreground">{{
-                                    item.given_by
-                                }}</span>
-                                ·
-                            </template>
                             Received {{ formatDate(item.received_at) }}
                         </p>
                     </div>
