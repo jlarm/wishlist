@@ -78,7 +78,10 @@ function claimTooltip(item: WishlistItem): string {
                 >
                     <!-- Item: thumbnail + title -->
                     <td class="px-4 py-3">
-                        <div class="flex items-center gap-3">
+                        <!-- Capped so long titles truncate instead of widening the table -->
+                        <div
+                            class="flex max-w-xs items-center gap-3 lg:max-w-sm"
+                        >
                             <div
                                 class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted"
                             >
@@ -89,7 +92,10 @@ function claimTooltip(item: WishlistItem): string {
                                 />
                             </div>
                             <div class="min-w-0">
-                                <p class="truncate font-medium">
+                                <p
+                                    class="truncate font-medium"
+                                    :title="item.title"
+                                >
                                     {{ item.title }}
                                 </p>
                                 <p
