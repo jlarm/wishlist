@@ -1,11 +1,87 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import ClaimedItemController from '@/actions/App/Http/Controllers/Admin/ClaimedItemController';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import WishlistItemActions from '@/components/WishlistItemActions.vue';
 import type { WishlistItem } from '@/types';
 
 defineProps<{
     items: WishlistItem[];
     showOwner?: boolean;
+    // Spell out who claimed each item under its status, not just on hover.
+    showClaimer?: boolean;
+    // Admin view: switch a claim's status right from its row.
+    editableStatus?: boolean;
 }>();
+
+const statusSelectClass: Record<string, string> = {
+    reserved: 'border-gold/40 bg-gold/10 text-gold',
+    purchased: 'border-holly/40 bg-holly/10 text-holly',
+    delivered: 'border-cranberry/30 bg-cranberry/10 text-cranberry',
+};
+
+type ClaimStatus = 'reserved' | 'purchased' | 'delivered';
+
+// A status change waiting on the price prompt.
+const pendingChange = ref<{ item: WishlistItem; status: ClaimStatus } | null>(
+    null,
+);
+const pricePaid = ref<string | number>('');
+
+function saveStatus(
+    item: WishlistItem,
+    status: ClaimStatus,
+    price: string | null = null,
+) {
+    router.patch(
+        ClaimedItemController.update(item.id).url,
+        { status, price_paid: price },
+        { preserveScroll: true, preserveState: true },
+    );
+}
+
+// Moving to bought (or straight from reserved to delivered) means it was just
+// bought, so ask what it cost first. Other changes save immediately.
+function setStatus(item: WishlistItem, event: Event) {
+    const select = event.target as HTMLSelectElement;
+    const status = select.value as ClaimStatus;
+    const wasReserved = item.purchase?.status === 'reserved';
+
+    if (status === 'purchased' || (status === 'delivered' && wasReserved)) {
+        // Show the current status until the prompt is answered.
+        select.value = item.purchase?.status ?? 'reserved';
+        pricePaid.value = '';
+        pendingChange.value = { item, status };
+
+        return;
+    }
+
+    saveStatus(item, status);
+}
+
+function confirmPendingChange() {
+    if (!pendingChange.value) {
+        return;
+    }
+
+    saveStatus(
+        pendingChange.value.item,
+        pendingChange.value.status,
+        pricePaid.value === '' ? null : String(pricePaid.value),
+    );
+    pendingChange.value = null;
+}
 
 function formatCurrency(value: string | null): string | null {
     if (value === null) {
@@ -165,13 +241,35 @@ function claimTooltip(item: WishlistItem): string {
 
                     <!-- Status -->
                     <td class="px-4 py-3">
+                        <select
+                            v-if="editableStatus && item.purchase"
+                            :value="item.purchase.status"
+                            class="h-7 rounded-full border px-2 text-xs font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                            :class="statusSelectClass[item.purchase.status]"
+                            aria-label="Change status"
+                            @change="setStatus(item, $event)"
+                        >
+                            <option value="reserved">Reserved</option>
+                            <option value="purchased">Bought</option>
+                            <option value="delivered">Delivered</option>
+                        </select>
                         <span
-                            v-if="!item.is_owner && item.is_purchased"
+                            v-else-if="!item.is_owner && item.is_purchased"
                             class="inline-flex items-center rounded-full border border-cranberry/30 bg-cranberry/10 px-2 py-0.5 text-xs font-semibold text-cranberry"
                             :title="claimTooltip(item)"
                         >
                             {{ claimLabel(item) }}
                         </span>
+                        <p
+                            v-if="
+                                showClaimer &&
+                                item.is_purchased &&
+                                item.purchase?.purchased_by_name
+                            "
+                            class="mt-1 text-xs whitespace-nowrap text-muted-foreground"
+                        >
+                            by {{ item.purchase.purchased_by_name }}
+                        </p>
                         <span
                             v-else-if="
                                 item.is_owner &&
@@ -193,10 +291,58 @@ function claimTooltip(item: WishlistItem): string {
 
                     <!-- Actions -->
                     <td class="px-4 py-3">
-                        <WishlistItemActions :item="item" class="justify-end" />
+                        <WishlistItemActions
+                            :item="item"
+                            :hide-claim-controls="editableStatus"
+                            class="justify-end"
+                        />
                     </td>
                 </tr>
             </tbody>
         </table>
+
+        <Dialog
+            :open="pendingChange !== null"
+            @update:open="(open) => !open && (pendingChange = null)"
+        >
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Mark as bought?</DialogTitle>
+                    <DialogDescription>
+                        Record what “{{ pendingChange?.item.title }}” cost.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="grid gap-2">
+                    <Label for="status-price-paid">
+                        Price paid (optional)
+                    </Label>
+                    <Input
+                        id="status-price-paid"
+                        v-model="pricePaid"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        inputmode="decimal"
+                        :placeholder="pendingChange?.item.price ?? '0.00'"
+                    />
+                    <p class="text-xs text-muted-foreground">
+                        Leave blank to keep any price already recorded, or use
+                        the listed price.
+                    </p>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="pendingChange = null">
+                        Cancel
+                    </Button>
+                    <Button @click="confirmPendingChange">
+                        {{
+                            pendingChange?.status === 'delivered'
+                                ? 'Mark as delivered'
+                                : 'Mark as bought'
+                        }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>

@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Gift, LayoutGrid, Mail, ReceiptText, Users } from '@lucide/vue';
+import {
+    Gift,
+    LayoutGrid,
+    ListChecks,
+    Mail,
+    ReceiptText,
+    Users,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,6 +22,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as claimedItemsIndex } from '@/routes/admin/claimed-items';
 import { index as invitationsIndex } from '@/routes/admin/invitations';
 import { index as spendingIndex } from '@/routes/admin/spending';
 import { index as usersIndex } from '@/routes/admin/users';
@@ -38,6 +46,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             { title: 'Invitations', href: invitationsIndex(), icon: Mail },
             { title: 'Users', href: usersIndex(), icon: Users },
             { title: 'Spending', href: spendingIndex(), icon: ReceiptText },
+            {
+                title: 'Claimed items',
+                href: claimedItemsIndex(),
+                icon: ListChecks,
+            },
         );
     }
 

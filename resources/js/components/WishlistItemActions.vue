@@ -17,6 +17,8 @@ const props = defineProps<{
     item: WishlistItem;
     // Stretch the claim button group to fill the width (used in the card grid).
     block?: boolean;
+    // Leave out reserve/bought/delivered/release, e.g. where status is edited inline.
+    hideClaimControls?: boolean;
 }>();
 
 const purchaseNote = ref('');
@@ -198,7 +200,10 @@ function deleteItem() {
         </div>
 
         <!-- Non-owner: claim controls, kept together as one button group -->
-        <div v-else-if="hasClaimActions" :class="groupClass">
+        <div
+            v-else-if="hasClaimActions && !hideClaimControls"
+            :class="groupClass"
+        >
             <ConfirmDialog
                 v-if="item.can.purchase && !item.is_purchased"
                 title="Reserve this gift?"
