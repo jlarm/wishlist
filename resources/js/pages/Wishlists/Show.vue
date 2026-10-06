@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     ArrowUpDown,
     CalendarHeart,
@@ -21,7 +21,6 @@ import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import WishlistShareController from '@/actions/App/Http/Controllers/WishlistShareController';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -47,7 +46,7 @@ import { describeOccasion } from '@/lib/occasions';
 import { index as receivedIndex } from '@/routes/wishlist/received';
 import { create as createItem } from '@/routes/wishlist-items';
 import { show as wishlistShow } from '@/routes/wishlists';
-import type { NextOccasion, WishlistItem } from '@/types';
+import type { NextOccasion, User, WishlistItem } from '@/types';
 
 const props = defineProps<{
     owner: {
@@ -120,8 +119,14 @@ const reordering = ref(false);
 const priorityFilter = ref<string>('all');
 const tagFilter = ref<string>('all');
 const domainFilter = ref<string>('all');
-// Only meaningful on someone else's list — the owner never sees claim state.
-const hidePurchased = ref(false);
+// Only admins ever see claim status, and never on their own list.
+const page = usePage<{ auth: { user: User } }>();
+const canSeeClaims = computed(
+    () => page.props.auth.user?.is_admin === true && !props.owner.is_me,
+);
+const statusFilter = ref<
+    'all' | 'available' | 'reserved' | 'purchased' | 'delivered' | 'mine'
+>('all');
 
 // The retailer host for an item's link (e.g. "amazon.com"), or null when it has
 // no (parseable) URL. "www." is stripped so links group under one domain.
@@ -206,8 +211,17 @@ const visibleItems = computed(() => {
         );
     }
 
-    if (!props.owner.is_me && hidePurchased.value) {
-        result = result.filter((item) => !item.is_purchased);
+    if (canSeeClaims.value && statusFilter.value !== 'all') {
+        result = result.filter((item) => {
+            switch (statusFilter.value) {
+                case 'available':
+                    return !item.is_purchased;
+                case 'mine':
+                    return item.purchase?.purchased_by_me === true;
+                default:
+                    return item.purchase?.status === statusFilter.value;
+            }
+        });
     }
 
     result.sort((a, b) => {
@@ -242,7 +256,7 @@ const {
 } = useWindowedList(visibleItems);
 
 watch(
-    [search, sortBy, priorityFilter, tagFilter, domainFilter, hidePurchased],
+    [search, sortBy, priorityFilter, tagFilter, domainFilter, statusFilter],
     resetWindow,
 );
 
@@ -539,14 +553,20 @@ function copyWithFallback(text: string) {
                 <option value="price_desc">Sort: Price (high to low)</option>
             </select>
 
-            <!-- Hide already-claimed items (never shown on your own list) -->
-            <label
-                v-if="!owner.is_me"
-                class="flex cursor-pointer items-center gap-2 text-sm"
+            <!-- Claim status (admins only, never on your own list) -->
+            <select
+                v-if="canSeeClaims"
+                v-model="statusFilter"
+                :class="selectClass"
+                aria-label="Filter by status"
             >
-                <Checkbox v-model="hidePurchased" />
-                Hide purchased
-            </label>
+                <option value="all">All statuses</option>
+                <option value="available">Available</option>
+                <option value="reserved">Reserved</option>
+                <option value="purchased">Bought</option>
+                <option value="delivered">Delivered</option>
+                <option value="mine">Claimed by me</option>
+            </select>
 
             <Button
                 v-if="owner.is_me && items.length > 1"

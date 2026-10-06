@@ -34,7 +34,7 @@ class DashboardController extends Controller
             ->visible()
             ->active()
             ->where('user_id', '!=', $user->id)
-            ->with(['user', 'purchase.purchasedBy'])
+            ->with(['user', 'purchase.purchasedBy', 'originalPrice'])
             ->latest()
             ->limit(6)
             ->get();

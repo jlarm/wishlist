@@ -59,11 +59,12 @@ class WishlistItemPolicy
     /**
      * Determine whether the user can mark the item as purchased.
      *
-     * Only non-owners may purchase, and never their own item.
+     * Only admins (the gift-buying parents) may claim items, and never their
+     * own. Everyone else just keeps a list.
      */
     public function purchase(User $user, WishlistItem $wishlistItem): bool
     {
-        if ($user->isDisabled()) {
+        if ($user->isDisabled() || ! $user->isAdmin()) {
             return false;
         }
 

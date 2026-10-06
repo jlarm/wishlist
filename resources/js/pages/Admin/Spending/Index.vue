@@ -11,6 +11,7 @@ type SpendingSummary = {
     requested_total: string;
     items_count: number;
     spent_total: string;
+    spent_vs_original: string | null;
     reserved_total: string;
     awaiting_delivery_count: number;
     delivered_count: number;
@@ -29,6 +30,7 @@ type SpendingUser = {
     receiving: ClaimCounts | null;
     received_count: number;
     spent_total: string;
+    spent_vs_original: string | null;
     reserved_total: string;
     giving: ClaimCounts;
 };
@@ -53,6 +55,36 @@ function formatPrice(price: string): string {
     return currency.format(Number(price));
 }
 
+/**
+ * "$12.00 under" / "$3.50 over" what the bought gifts cost when they were
+ * added, or null when there's nothing to compare.
+ */
+function describeDifference(
+    difference: string | null,
+): { text: string; cheaper: boolean } | null {
+    const amount = Number(difference ?? 0);
+
+    if (amount === 0) {
+        return null;
+    }
+
+    return {
+        text: `${currency.format(Math.abs(amount))} ${amount < 0 ? 'under' : 'over'} original price`,
+        cheaper: amount < 0,
+    };
+}
+
+const rows = computed(() =>
+    props.users.map((user) => ({
+        ...user,
+        spentDifference: describeDifference(user.spent_vs_original),
+    })),
+);
+
+const summarySpentDifference = computed(() =>
+    describeDifference(props.summary.spent_vs_original),
+);
+
 const summaryTiles = computed(() => [
     {
         label: 'Requested',
@@ -62,7 +94,7 @@ const summaryTiles = computed(() => [
     {
         label: 'Spent',
         value: formatPrice(props.summary.spent_total),
-        detail: 'Bought or delivered',
+        detail: summarySpentDifference.value?.text ?? 'Bought or delivered',
     },
     {
         label: 'Reserved',
@@ -138,7 +170,7 @@ const summaryTiles = computed(() => [
                 </thead>
                 <tbody>
                     <tr
-                        v-for="user in users"
+                        v-for="user in rows"
                         :key="user.id"
                         class="cursor-pointer border-t border-sidebar-border/70 transition-colors hover:bg-muted/40 dark:border-sidebar-border"
                         @click="router.visit(wishlistShow(user.id))"
@@ -213,6 +245,17 @@ const summaryTiles = computed(() => [
                             class="px-4 py-3 text-right font-medium tabular-nums"
                         >
                             <SpendingAmount :amount="user.spent_total" />
+                            <div
+                                v-if="user.spentDifference"
+                                class="text-xs font-normal whitespace-nowrap"
+                                :class="
+                                    user.spentDifference.cheaper
+                                        ? 'text-holly'
+                                        : 'text-cranberry'
+                                "
+                            >
+                                {{ user.spentDifference.text }}
+                            </div>
                         </td>
                         <td
                             class="px-4 py-3 text-right text-muted-foreground tabular-nums"

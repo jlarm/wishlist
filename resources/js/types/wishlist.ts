@@ -15,6 +15,9 @@ export type PurchaseInfo = {
     // A stale reservation we've emailed the claimer about.
     needs_confirmation: boolean;
     can_confirm: boolean;
+    // Only sent to the giver who claimed it.
+    price_paid: string | null;
+    original_price: string | null;
 };
 
 export type PricePoint = {

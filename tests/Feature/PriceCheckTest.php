@@ -113,12 +113,13 @@ test('the backfill command seeds one point per priced item that has none', funct
     expect($alreadyTracked->priceHistories()->count())->toBe(1);
 });
 
-test('a price drop emails the other members but never the owner', function () {
+test('a price drop emails the other admins but never the owner or other members', function () {
     Notification::fake();
     fakePriceResponse('42.50');
 
-    $owner = User::factory()->create();
-    $viewer = User::factory()->create();
+    $owner = User::factory()->admin()->create();
+    $viewer = User::factory()->admin()->create();
+    $member = User::factory()->create();
     $item = WishlistItem::factory()->for($owner)->create([
         'url' => 'https://example.com/product',
         'price' => 60.00,
@@ -133,6 +134,7 @@ test('a price drop emails the other members but never the owner', function () {
             && $notification->newPrice === '42.50',
     );
     Notification::assertNotSentTo($owner, WishlistItemPriceDropped::class);
+    Notification::assertNotSentTo($member, WishlistItemPriceDropped::class);
 });
 
 test('a price drop on a reserved item emails only the person who reserved it', function () {

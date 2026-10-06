@@ -6,7 +6,7 @@ use App\Notifications\WishlistItemPriceDropped;
 use App\Notifications\WishlistItemPurchased;
 
 test('the notifications settings page is displayed', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     $this->actingAs($user)
         ->get(route('notifications.edit'))
@@ -18,7 +18,7 @@ test('the notifications settings page is displayed', function () {
 });
 
 test('notification preferences can be updated', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     $this->actingAs($user)
         ->patch(route('notifications.update'), [
@@ -36,8 +36,14 @@ test('notification preferences can be updated', function () {
     expect($user->notify_occasion_reminders)->toBeFalse();
 });
 
+test('members other than admins have no notification settings', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('notifications.edit'))
+        ->assertForbidden();
+});
+
 test('both preferences are required booleans', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     $this->actingAs($user)
         ->patch(route('notifications.update'), ['notify_price_drops' => 'yes'])

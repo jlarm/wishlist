@@ -5,7 +5,7 @@ use App\Models\WishlistItem;
 use App\Models\WishlistItemPurchase;
 
 test('the gifts page lists only the viewer\'s own claims', function () {
-    $viewer = User::factory()->create();
+    $viewer = User::factory()->admin()->create();
     $someoneElse = User::factory()->create();
     $mine = WishlistItemPurchase::factory()->create(['purchased_by_user_id' => $viewer->id]);
     WishlistItemPurchase::factory()->create(['purchased_by_user_id' => $someoneElse->id]);
@@ -22,7 +22,7 @@ test('the gifts page lists only the viewer\'s own claims', function () {
 });
 
 test('the gifts page omits claims on deleted items', function () {
-    $viewer = User::factory()->create();
+    $viewer = User::factory()->admin()->create();
     $claim = WishlistItemPurchase::factory()->create(['purchased_by_user_id' => $viewer->id]);
     $claim->wishlistItem->delete();
 
@@ -33,4 +33,10 @@ test('the gifts page omits claims on deleted items', function () {
 
 test('guests cannot view the gifts page', function () {
     $this->get(route('gifts.index'))->assertRedirect(route('login'));
+});
+
+test('members other than admins cannot view the gifts page', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('gifts.index'))
+        ->assertForbidden();
 });

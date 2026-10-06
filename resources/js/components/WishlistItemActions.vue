@@ -8,6 +8,8 @@ import WishlistItemController from '@/actions/App/Http/Controllers/WishlistItemC
 import WishlistItemPurchaseController from '@/actions/App/Http/Controllers/WishlistItemPurchaseController';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { WishlistItem } from '@/types';
 
@@ -18,7 +20,15 @@ const props = defineProps<{
 }>();
 
 const purchaseNote = ref('');
+// What the giver actually paid, asked for whenever they mark it bought.
+const pricePaid = ref<string | number>('');
 const processing = ref(false);
+
+const pricePaidPayload = computed(() =>
+    pricePaid.value === '' || pricePaid.value === null
+        ? null
+        : String(pricePaid.value),
+);
 
 // Whether a non-owner has any claim action available — used to avoid rendering
 // an empty bordered button group when the item is claimed by someone else.
@@ -57,11 +67,12 @@ function buyOutright() {
     processing.value = true;
     router.post(
         WishlistItemPurchaseController.store(props.item.id).url,
-        { status: 'purchased' },
+        { status: 'purchased', price_paid: pricePaidPayload.value },
         {
             preserveScroll: true,
             onFinish: () => {
                 processing.value = false;
+                pricePaid.value = '';
             },
         },
     );
@@ -71,11 +82,14 @@ function advanceClaim(status: 'purchased' | 'delivered') {
     processing.value = true;
     router.patch(
         WishlistItemPurchaseController.update(props.item.id).url,
-        { status },
+        status === 'purchased'
+            ? { status, price_paid: pricePaidPayload.value }
+            : { status },
         {
             preserveScroll: true,
             onFinish: () => {
                 processing.value = false;
+                pricePaid.value = '';
             },
         },
     );
@@ -211,16 +225,37 @@ function deleteItem() {
             </ConfirmDialog>
 
             <!-- Skip reserving and claim it as already bought -->
-            <Button
+            <ConfirmDialog
                 v-if="item.can.purchase && !item.is_purchased"
-                variant="ghost"
-                size="sm"
-                class="rounded-none"
-                :disabled="processing"
-                @click="buyOutright"
+                title="Mark as bought?"
+                :description="`Let the group know you've bought “${item.title}”. ${item.owner_name ?? 'They'} will never see it.`"
+                confirm-label="Mark as bought"
+                :processing="processing"
+                @confirm="buyOutright"
             >
-                Mark as bought
-            </Button>
+                <template #trigger>
+                    <Button variant="ghost" size="sm" class="rounded-none">
+                        Mark as bought
+                    </Button>
+                </template>
+                <div class="grid gap-2">
+                    <Label :for="`price-paid-${item.id}`">
+                        Price you paid (optional)
+                    </Label>
+                    <Input
+                        :id="`price-paid-${item.id}`"
+                        v-model="pricePaid"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        inputmode="decimal"
+                        :placeholder="item.price ?? '0.00'"
+                    />
+                    <p class="text-xs text-muted-foreground">
+                        Leave blank to use the listed price.
+                    </p>
+                </div>
+            </ConfirmDialog>
 
             <!-- Reply to the stale-reservation reminder email -->
             <Button
@@ -234,16 +269,37 @@ function deleteItem() {
                 Keep it
             </Button>
 
-            <Button
+            <ConfirmDialog
                 v-if="item.purchase?.can_mark_bought"
-                variant="ghost"
-                size="sm"
-                class="rounded-none"
-                :disabled="processing"
-                @click="advanceClaim('purchased')"
+                title="Mark as bought?"
+                :description="`Move “${item.title}” from reserved to bought.`"
+                confirm-label="Mark as bought"
+                :processing="processing"
+                @confirm="advanceClaim('purchased')"
             >
-                Mark as bought
-            </Button>
+                <template #trigger>
+                    <Button variant="ghost" size="sm" class="rounded-none">
+                        Mark as bought
+                    </Button>
+                </template>
+                <div class="grid gap-2">
+                    <Label :for="`price-paid-${item.id}`">
+                        Price you paid (optional)
+                    </Label>
+                    <Input
+                        :id="`price-paid-${item.id}`"
+                        v-model="pricePaid"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        inputmode="decimal"
+                        :placeholder="item.price ?? '0.00'"
+                    />
+                    <p class="text-xs text-muted-foreground">
+                        Leave blank to use the listed price.
+                    </p>
+                </div>
+            </ConfirmDialog>
 
             <Button
                 v-if="item.purchase?.can_mark_delivered"

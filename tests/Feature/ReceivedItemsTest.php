@@ -36,7 +36,7 @@ test('a reservation on a received item is released and its claimer told', functi
     Notification::fake();
     $owner = User::factory()->create();
     $item = WishlistItem::factory()->for($owner)->create();
-    $claim = WishlistItemPurchase::factory()->create(['wishlist_item_id' => $item->id]);
+    $claim = WishlistItemPurchase::factory()->for(User::factory()->admin(), 'purchasedBy')->create(['wishlist_item_id' => $item->id]);
 
     $this->actingAs($owner)->post(route('wishlist-items.received.store', $item));
 

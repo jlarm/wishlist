@@ -56,8 +56,9 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
 
     Route::get('wishlists', [WishlistController::class, 'index'])->name('wishlists.index');
 
-    // Everything the viewer has claimed for other people.
-    Route::get('gifts', [GiftController::class, 'index'])->name('gifts.index');
+    // Everything the viewer has claimed for other people. Admin-only, since
+    // members never see claim status, even their own.
+    Route::get('gifts', [GiftController::class, 'index'])->middleware('admin')->name('gifts.index');
 
     // Item routes are declared before the {user} wildcard so they are not
     // shadowed by the wishlist show route.

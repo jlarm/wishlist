@@ -7,7 +7,7 @@ use App\Models\WishlistItemPurchase;
 
 test('claiming an item reserves it rather than marking it bought', function () {
     $owner = User::factory()->create();
-    $claimer = User::factory()->create();
+    $claimer = User::factory()->admin()->create();
     $item = WishlistItem::factory()->for($owner)->create();
 
     $this->actingAs($claimer)
@@ -21,7 +21,7 @@ test('claiming an item reserves it rather than marking it bought', function () {
 
 test('a giver can claim an item as bought without reserving it first', function () {
     $owner = User::factory()->create();
-    $buyer = User::factory()->create();
+    $buyer = User::factory()->admin()->create();
     $item = WishlistItem::factory()->for($owner)->create();
 
     $this->actingAs($buyer)
@@ -35,7 +35,7 @@ test('a giver can claim an item as bought without reserving it first', function 
 
 test('an item cannot be claimed straight into the delivered state', function () {
     $owner = User::factory()->create();
-    $buyer = User::factory()->create();
+    $buyer = User::factory()->admin()->create();
     $item = WishlistItem::factory()->for($owner)->create();
 
     $this->actingAs($buyer)
@@ -47,7 +47,7 @@ test('an item cannot be claimed straight into the delivered state', function () 
 
 test('the claimer can upgrade a reservation to bought', function () {
     $owner = User::factory()->create();
-    $claimer = User::factory()->create();
+    $claimer = User::factory()->admin()->create();
     $item = WishlistItem::factory()->for($owner)->create();
     WishlistItemPurchase::factory()->create([
         'wishlist_item_id' => $item->id,
@@ -63,7 +63,7 @@ test('the claimer can upgrade a reservation to bought', function () {
 
 test('the claimer can mark a bought item as delivered', function () {
     $owner = User::factory()->create();
-    $claimer = User::factory()->create();
+    $claimer = User::factory()->admin()->create();
     $item = WishlistItem::factory()->for($owner)->create();
     WishlistItemPurchase::factory()->purchased()->create([
         'wishlist_item_id' => $item->id,
@@ -79,7 +79,7 @@ test('the claimer can mark a bought item as delivered', function () {
 
 test('an item cannot be marked delivered until it has been bought', function () {
     $owner = User::factory()->create();
-    $claimer = User::factory()->create();
+    $claimer = User::factory()->admin()->create();
     $item = WishlistItem::factory()->for($owner)->create();
     // Only reserved, not yet bought.
     WishlistItemPurchase::factory()->create([
@@ -96,7 +96,7 @@ test('an item cannot be marked delivered until it has been bought', function () 
 
 test('the delivered control appears only once an item is bought', function () {
     $owner = User::factory()->create();
-    $claimer = User::factory()->create();
+    $claimer = User::factory()->admin()->create();
     $item = WishlistItem::factory()->for($owner)->create();
     WishlistItemPurchase::factory()->purchased()->create([
         'wishlist_item_id' => $item->id,
@@ -113,7 +113,7 @@ test('the delivered control appears only once an item is bought', function () {
 
 test('a different user cannot mark someone else\'s claim as bought', function () {
     $owner = User::factory()->create();
-    $claimer = User::factory()->create();
+    $claimer = User::factory()->admin()->create();
     $other = User::factory()->create();
     $item = WishlistItem::factory()->for($owner)->create();
     WishlistItemPurchase::factory()->create([
@@ -128,9 +128,9 @@ test('a different user cannot mark someone else\'s claim as bought', function ()
     expect($item->purchase()->sole()->status)->toBe(PurchaseStatus::Reserved);
 });
 
-test('the reserved-vs-bought state and controls are exposed to other viewers', function () {
+test('the reserved-vs-bought state and controls are exposed to admins', function () {
     $owner = User::factory()->create();
-    $claimer = User::factory()->create();
+    $claimer = User::factory()->admin()->create();
     $item = WishlistItem::factory()->for($owner)->create();
     WishlistItemPurchase::factory()->create([
         'wishlist_item_id' => $item->id,
@@ -144,8 +144,8 @@ test('the reserved-vs-bought state and controls are exposed to other viewers', f
             ->where('items.0.purchase.status', 'reserved')
             ->where('items.0.purchase.can_mark_bought', true));
 
-    // A third party sees it is claimed but cannot manage it.
-    $viewer = User::factory()->create();
+    // Another admin sees it is claimed but cannot manage it.
+    $viewer = User::factory()->admin()->create();
     $this->actingAs($viewer)
         ->get(route('wishlists.show', $owner))
         ->assertInertia(fn ($page) => $page
@@ -155,7 +155,7 @@ test('the reserved-vs-bought state and controls are exposed to other viewers', f
 
 test('a released claim frees the item for someone else', function () {
     $owner = User::factory()->create();
-    $claimer = User::factory()->create();
+    $claimer = User::factory()->admin()->create();
     $item = WishlistItem::factory()->for($owner)->create();
     WishlistItemPurchase::factory()->create([
         'wishlist_item_id' => $item->id,

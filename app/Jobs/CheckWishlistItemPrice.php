@@ -162,8 +162,8 @@ class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
 
     /**
      * Who benefits from a lower price: the person who reserved the item if it's
-     * spoken for (and still just a reservation), otherwise every other member,
-     * since anyone could snap up the deal. Bought/delivered items alert no one.
+     * spoken for (and still just a reservation), otherwise every other admin,
+     * since only admins buy gifts. Bought/delivered items alert no one.
      *
      * @return Collection<int, User>
      */
@@ -184,6 +184,7 @@ class CheckWishlistItemPrice implements ShouldBeUnique, ShouldQueue
 
         return User::query()
             ->whereNot('id', $this->wishlistItem->user_id)
+            ->where('is_admin', true)
             ->whereNull('disabled_at')
             ->get();
     }

@@ -179,6 +179,16 @@ class WishlistItem extends Model
     }
 
     /**
+     * The first price recorded for the item, i.e. its price when it was added.
+     *
+     * @return HasOne<WishlistItemPriceHistory, $this>
+     */
+    public function originalPrice(): HasOne
+    {
+        return $this->hasOne(WishlistItemPriceHistory::class)->oldestOfMany('recorded_at');
+    }
+
+    /**
      * Scope a query to only visible items.
      *
      * @param  Builder<WishlistItem>  $query

@@ -69,7 +69,8 @@ class RemindStaleReservations extends Command
 
     /**
      * Reservations (not yet bought) on items still on a list, held by active
-     * members.
+     * admins. Other members never see claim status, so they couldn't answer a
+     * reminder and their reservations are left alone.
      *
      * @return Builder<WishlistItemPurchase>
      */
@@ -78,7 +79,7 @@ class RemindStaleReservations extends Command
         return WishlistItemPurchase::query()
             ->where('status', PurchaseStatus::Reserved)
             ->whereHas('wishlistItem', fn (Builder $query) => $query->active())
-            ->whereHas('purchasedBy', fn (Builder $query) => $query->whereNull('disabled_at'))
+            ->whereHas('purchasedBy', fn (Builder $query) => $query->whereNull('disabled_at')->where('is_admin', true))
             ->with(['wishlistItem.user', 'purchasedBy']);
     }
 }

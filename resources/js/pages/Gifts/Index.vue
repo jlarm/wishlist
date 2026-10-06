@@ -42,8 +42,13 @@ const groups = computed(() => {
     return [...byOwner.values()];
 });
 
+// Prefer what was actually paid, falling back to the listed price.
 function sumPrices(items: WishlistItem[]): number {
-    return items.reduce((total, item) => total + Number(item.price ?? 0), 0);
+    return items.reduce(
+        (total, item) =>
+            total + Number(item.purchase?.price_paid ?? item.price ?? 0),
+        0,
+    );
 }
 
 const reserved = computed(() =>

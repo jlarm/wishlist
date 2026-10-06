@@ -175,8 +175,9 @@ function claimTooltip(item: WishlistItem): string {
                         >
                             Hidden
                         </span>
+                        <!-- Only admins get claim data, so only they see "Available" -->
                         <span
-                            v-else-if="!item.is_owner"
+                            v-else-if="item.is_purchased === false"
                             class="text-xs text-muted-foreground"
                         >
                             Available

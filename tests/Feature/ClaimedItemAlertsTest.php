@@ -40,7 +40,7 @@ function itemPayload(WishlistItem $item, array $overrides = []): array
 test('the claimer is told when the owner changes a detail they are buying against', function () {
     $owner = User::factory()->create();
     $item = WishlistItem::factory()->for($owner)->create(['size' => 'M']);
-    $claim = WishlistItemPurchase::factory()->create(['wishlist_item_id' => $item->id]);
+    $claim = WishlistItemPurchase::factory()->for(User::factory()->admin(), 'purchasedBy')->create(['wishlist_item_id' => $item->id]);
 
     $this->actingAs($owner)
         ->put(route('wishlist-items.update', $item), itemPayload($item, ['size' => 'L']))
@@ -56,7 +56,7 @@ test('the claimer is told when the owner changes a detail they are buying agains
 test('changing only the priority does not alert the claimer', function () {
     $owner = User::factory()->create();
     $item = WishlistItem::factory()->for($owner)->create(['priority' => 'low']);
-    WishlistItemPurchase::factory()->create(['wishlist_item_id' => $item->id]);
+    WishlistItemPurchase::factory()->for(User::factory()->admin(), 'purchasedBy')->create(['wishlist_item_id' => $item->id]);
 
     $this->actingAs($owner)
         ->put(route('wishlist-items.update', $item), itemPayload($item, ['priority' => 'high']))
@@ -68,7 +68,7 @@ test('changing only the priority does not alert the claimer', function () {
 test('a delivered gift no longer triggers change alerts', function () {
     $owner = User::factory()->create();
     $item = WishlistItem::factory()->for($owner)->create(['size' => 'M']);
-    WishlistItemPurchase::factory()->create(['wishlist_item_id' => $item->id, 'status' => PurchaseStatus::Delivered]);
+    WishlistItemPurchase::factory()->for(User::factory()->admin(), 'purchasedBy')->create(['wishlist_item_id' => $item->id, 'status' => PurchaseStatus::Delivered]);
 
     $this->actingAs($owner)
         ->put(route('wishlist-items.update', $item), itemPayload($item, ['size' => 'L']))
@@ -80,7 +80,7 @@ test('a delivered gift no longer triggers change alerts', function () {
 test('the claimer is told when the owner hides a claimed item', function () {
     $owner = User::factory()->create();
     $item = WishlistItem::factory()->for($owner)->create();
-    $claim = WishlistItemPurchase::factory()->create(['wishlist_item_id' => $item->id]);
+    $claim = WishlistItemPurchase::factory()->for(User::factory()->admin(), 'purchasedBy')->create(['wishlist_item_id' => $item->id]);
 
     $this->actingAs($owner)
         ->put(route('wishlist-items.update', $item), itemPayload($item, ['visibility_status' => 'hidden']))
@@ -97,7 +97,7 @@ test('the claimer is told when the owner hides a claimed item', function () {
 test('the claimer is told when the owner deletes a claimed item', function () {
     $owner = User::factory()->create();
     $item = WishlistItem::factory()->for($owner)->create();
-    $claim = WishlistItemPurchase::factory()->purchased()->create(['wishlist_item_id' => $item->id]);
+    $claim = WishlistItemPurchase::factory()->for(User::factory()->admin(), 'purchasedBy')->purchased()->create(['wishlist_item_id' => $item->id]);
 
     $this->actingAs($owner)
         ->delete(route('wishlist-items.destroy', $item))
@@ -115,6 +115,17 @@ test('deleting an unclaimed item sends nothing', function () {
     $owner = User::factory()->create();
     $item = WishlistItem::factory()->for($owner)->create();
 
+    $this->actingAs($owner)->delete(route('wishlist-items.destroy', $item));
+
+    Notification::assertNothingSent();
+});
+
+test('members other than admins are never told about changes to items they claimed', function () {
+    $owner = User::factory()->create();
+    $item = WishlistItem::factory()->for($owner)->create(['size' => 'M']);
+    WishlistItemPurchase::factory()->create(['wishlist_item_id' => $item->id]);
+
+    $this->actingAs($owner)->put(route('wishlist-items.update', $item), itemPayload($item, ['size' => 'L']));
     $this->actingAs($owner)->delete(route('wishlist-items.destroy', $item));
 
     Notification::assertNothingSent();

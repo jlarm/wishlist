@@ -82,9 +82,9 @@ test('givers get one digest of occasions 30 or 7 days away, never their own', fu
     Notification::fake();
     $this->travelTo('2026-12-18 09:00:00');
 
-    $alex = User::factory()->create(['name' => 'Alex']);
+    $alex = User::factory()->admin()->create(['name' => 'Alex']);
     $sam = User::factory()->create(['name' => 'Sam']);
-    $giver = User::factory()->create();
+    $giver = User::factory()->admin()->create();
     Occasion::factory()->for($alex)->create(['name' => 'Christmas', 'date' => '2000-12-25']);
     Occasion::factory()->for($sam)->create(['name' => 'Birthday', 'date' => '2000-01-17']);
     Occasion::factory()->for($sam)->create(['name' => 'Anniversary', 'date' => '2000-01-01']);
@@ -131,4 +131,17 @@ test('occasion reminders respect the opt-out', function () {
 
     expect($notification->via($optedOut))->toBe([]);
     expect($notification->via(User::factory()->create()))->toBe(['mail']);
+});
+
+test('members other than admins get no occasion reminders', function () {
+    Notification::fake();
+    $this->travelTo('2026-12-18 09:00:00');
+
+    $alex = User::factory()->create(['name' => 'Alex']);
+    $member = User::factory()->create();
+    Occasion::factory()->for($alex)->create(['name' => 'Christmas', 'date' => '2000-12-25']);
+
+    $this->artisan('occasions:remind')->assertSuccessful();
+
+    Notification::assertNotSentTo($member, UpcomingOccasionsReminder::class);
 });

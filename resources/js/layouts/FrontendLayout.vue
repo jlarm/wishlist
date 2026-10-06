@@ -93,6 +93,7 @@ const navLink =
                         <span class="hidden sm:inline">Everyone</span>
                     </Link>
                     <Link
+                        v-if="isAdmin"
                         :href="giftsIndex()"
                         :class="[
                             navLink,

@@ -26,7 +26,13 @@ class WishlistItemPurchaseController extends Controller
 
         $status = PurchaseStatus::tryFrom($request->validated('status') ?? '') ?? PurchaseStatus::Reserved;
 
-        $this->purchases->claim($wishlistItem, $request->user(), $status, $request->validated('note'));
+        $this->purchases->claim(
+            $wishlistItem,
+            $request->user(),
+            $status,
+            $request->validated('note'),
+            $this->normalizePrice($request->validated('price_paid')),
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $status === PurchaseStatus::Purchased
             ? __('Marked as bought. The group will know it\'s taken.')
@@ -48,6 +54,7 @@ class WishlistItemPurchaseController extends Controller
 
         $validated = $request->validate([
             'status' => ['required', Rule::in([PurchaseStatus::Purchased->value, PurchaseStatus::Delivered->value])],
+            'price_paid' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
         ]);
 
         $target = PurchaseStatus::from($validated['status']);
@@ -60,7 +67,7 @@ class WishlistItemPurchaseController extends Controller
 
         abort_unless($isValidTransition, 422);
 
-        $this->purchases->advanceTo($claim, $target);
+        $this->purchases->advanceTo($claim, $target, $this->normalizePrice($validated['price_paid'] ?? null));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $target === PurchaseStatus::Delivered
             ? __('Marked as delivered.')
@@ -83,5 +90,13 @@ class WishlistItemPurchaseController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Claim removed.')]);
 
         return back();
+    }
+
+    /**
+     * Store a submitted price as a two-decimal string, or null when left blank.
+     */
+    private function normalizePrice(mixed $price): ?string
+    {
+        return $price === null ? null : number_format((float) $price, 2, '.', '');
     }
 }

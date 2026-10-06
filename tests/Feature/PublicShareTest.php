@@ -52,8 +52,8 @@ test('the public list never exposes claim status', function () {
 
     $this->get(route('wishlist.shared', 'share-me'))
         ->assertInertia(fn ($page) => $page
-            ->where('items.0.is_purchased', false)
-            ->where('items.0.purchase', null));
+            ->missing('items.0.is_purchased')
+            ->missing('items.0.purchase'));
 });
 
 test('an unknown or disabled share token is not found', function () {

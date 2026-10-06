@@ -23,7 +23,7 @@ class RemindUpcomingOccasions extends Command
     public const REMIND_DAYS_BEFORE = [30, 7];
 
     /**
-     * Send each active member one digest covering everyone else's occasions
+     * Send each active admin one digest covering everyone else's occasions
      * that hit a reminder threshold today. Owners are never reminded of their
      * own occasions, and the unclaimed counts never reach them.
      */
@@ -65,7 +65,9 @@ class RemindUpcomingOccasions extends Command
 
         $sent = 0;
 
+        // Only admins buy gifts, so only they need the heads-up.
         User::query()
+            ->where('is_admin', true)
             ->whereNull('disabled_at')
             ->each(function (User $recipient) use ($upcoming, &$sent): void {
                 $theirs = array_values($upcoming

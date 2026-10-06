@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property int $wishlist_item_id
  * @property int $purchased_by_user_id
  * @property PurchaseStatus $status
+ * @property string|null $price_paid
  * @property Carbon $purchased_at
  * @property CarbonImmutable|null $confirmed_at
  * @property CarbonImmutable|null $reminded_at
@@ -36,6 +37,7 @@ class WishlistItemPurchase extends Model
         'wishlist_item_id',
         'purchased_by_user_id',
         'status',
+        'price_paid',
         'purchased_at',
         'confirmed_at',
         'reminded_at',
@@ -60,6 +62,7 @@ class WishlistItemPurchase extends Model
     {
         return [
             'status' => PurchaseStatus::class,
+            'price_paid' => 'decimal:2',
             'purchased_at' => 'datetime',
             'confirmed_at' => 'datetime',
             'reminded_at' => 'datetime',

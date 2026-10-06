@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -10,30 +11,20 @@ import { edit as editNotifications } from '@/routes/notifications';
 import { edit as editOccasions } from '@/routes/occasions';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
-import type { NavItem } from '@/types';
+import type { NavItem, User } from '@/types';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: editProfile(),
-    },
-    {
-        title: 'Security',
-        href: editSecurity(),
-    },
-    {
-        title: 'Occasions',
-        href: editOccasions(),
-    },
-    {
-        title: 'Notifications',
-        href: editNotifications(),
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-    },
-];
+const page = usePage<{ auth: { user: User } }>();
+
+// Every email preference is about buying gifts, which only admins do.
+const sidebarNavItems = computed<NavItem[]>(() => [
+    { title: 'Profile', href: editProfile() },
+    { title: 'Security', href: editSecurity() },
+    { title: 'Occasions', href: editOccasions() },
+    ...(page.props.auth.user?.is_admin
+        ? [{ title: 'Notifications', href: editNotifications() }]
+        : []),
+    { title: 'Appearance', href: editAppearance() },
+]);
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>

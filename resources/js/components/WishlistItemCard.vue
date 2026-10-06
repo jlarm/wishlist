@@ -76,6 +76,34 @@ const priceTrend = computed(() => {
     };
 });
 
+/**
+ * What the viewer paid, compared with the price when the item was added. Only
+ * the giver gets price_paid, so this never shows for anyone else.
+ */
+const pricePaid = computed(() => {
+    const paid = props.item.purchase?.price_paid;
+
+    if (!paid) {
+        return null;
+    }
+
+    const original = props.item.purchase?.original_price;
+    const delta = original ? Number(paid) - Number(original) : 0;
+
+    return {
+        amount: formatCurrency(paid),
+        cheaper: delta < 0,
+        difference: delta === 0 ? null : formatCurrency(Math.abs(delta)),
+    };
+});
+
+function formatCurrency(value: string | number): string {
+    return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: 'USD',
+    }).format(Number(value));
+}
+
 const purchasedDate = computed(() => {
     const at = props.item.purchase?.purchased_at;
 
@@ -267,6 +295,23 @@ const claimByline = computed(() => {
                     class="mt-0.5 text-xs text-muted-foreground"
                 >
                     Not bought yet — still a soft hold.
+                </p>
+                <p
+                    v-if="pricePaid"
+                    class="mt-0.5 text-xs text-muted-foreground"
+                >
+                    You paid {{ pricePaid.amount
+                    }}<span
+                        v-if="pricePaid.difference"
+                        class="font-semibold"
+                        :class="
+                            pricePaid.cheaper ? 'text-holly' : 'text-cranberry'
+                        "
+                    >
+                        · {{ pricePaid.difference }}
+                        {{ pricePaid.cheaper ? 'less' : 'more' }} than when
+                        added</span
+                    >
                 </p>
                 <p
                     v-if="purchasedDate"

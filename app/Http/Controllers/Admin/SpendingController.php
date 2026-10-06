@@ -30,7 +30,7 @@ class SpendingController extends Controller
         $users = User::query()->orderBy('name')->get();
 
         $items = WishlistItem::query()
-            ->with('purchase')
+            ->with(['purchase', 'originalPrice'])
             ->get();
 
         $itemsByOwner = $items->groupBy('user_id');
@@ -66,9 +66,8 @@ class SpendingController extends Controller
                     'delivered' => $this->countWithStatus($activeItems, PurchaseStatus::Delivered),
                 ],
                 'received_count' => $owned->whereNotNull('received_at')->count(),
-                'spent_total' => $this->sumPrices($giving->filter(
-                    fn (WishlistItem $item): bool => $item->purchase->status !== PurchaseStatus::Reserved,
-                )),
+                'spent_total' => $this->sumSpent($this->bought($giving)),
+                'spent_vs_original' => $this->differenceFromOriginal($this->bought($giving)),
                 'reserved_total' => $this->sumPrices($giving->filter(
                     fn (WishlistItem $item): bool => $item->purchase->status === PurchaseStatus::Reserved,
                 )),
@@ -89,9 +88,8 @@ class SpendingController extends Controller
             'summary' => [
                 'requested_total' => $this->sumPrices($activeItems),
                 'items_count' => $activeItems->count(),
-                'spent_total' => $this->sumPrices($claimedItems->filter(
-                    fn (WishlistItem $item): bool => $item->purchase->status !== PurchaseStatus::Reserved,
-                )),
+                'spent_total' => $this->sumSpent($this->bought($claimedItems)),
+                'spent_vs_original' => $this->differenceFromOriginal($this->bought($claimedItems)),
                 'reserved_total' => $this->sumPrices($claimedItems->filter(
                     fn (WishlistItem $item): bool => $item->purchase->status === PurchaseStatus::Reserved,
                 )),
@@ -110,6 +108,54 @@ class SpendingController extends Controller
     private function sumPrices(Collection $items): string
     {
         return number_format((float) $items->sum(fn (WishlistItem $item): float => (float) $item->price), 2, '.', '');
+    }
+
+    /**
+     * The claimed items that have actually been bought (or delivered).
+     *
+     * @param  Collection<int, WishlistItem>  $items
+     * @return Collection<int, WishlistItem>
+     */
+    private function bought(Collection $items): Collection
+    {
+        return $items->filter(fn (WishlistItem $item): bool => $item->purchase->status !== PurchaseStatus::Reserved);
+    }
+
+    /**
+     * Total what the given bought items cost: the price paid when the giver
+     * recorded one, otherwise the item's listed price.
+     *
+     * @param  Collection<int, WishlistItem>  $items
+     */
+    private function sumSpent(Collection $items): string
+    {
+        $total = $items->sum(fn (WishlistItem $item): float => (float) ($item->purchase->price_paid ?? $item->price));
+
+        return number_format((float) $total, 2, '.', '');
+    }
+
+    /**
+     * How much more (positive) or less (negative) was paid than each item cost
+     * when it was added, across items with both a recorded price paid and an
+     * original price. Null when no item can be compared.
+     *
+     * @param  Collection<int, WishlistItem>  $items
+     */
+    private function differenceFromOriginal(Collection $items): ?string
+    {
+        $comparable = $items->filter(
+            fn (WishlistItem $item): bool => $item->purchase->price_paid !== null && $item->originalPrice !== null,
+        );
+
+        if ($comparable->isEmpty()) {
+            return null;
+        }
+
+        $difference = $comparable->sum(
+            fn (WishlistItem $item): float => (float) $item->purchase->price_paid - (float) $item->originalPrice->price,
+        );
+
+        return number_format((float) $difference, 2, '.', '');
     }
 
     /**

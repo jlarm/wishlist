@@ -33,6 +33,8 @@ class StorePurchaseRequest extends FormRequest
             // straight to a purchase. Delivered is only reachable by advancing.
             'status' => ['nullable', Rule::in([PurchaseStatus::Reserved->value, PurchaseStatus::Purchased->value])],
             'note' => ['nullable', 'string', 'max:1000'],
+            // What the giver actually paid; only kept when buying outright.
+            'price_paid' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
         ];
     }
 }

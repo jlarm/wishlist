@@ -28,12 +28,14 @@ class PurchaseService
         User $claimer,
         PurchaseStatus $status = PurchaseStatus::Reserved,
         ?string $note = null,
+        ?string $pricePaid = null,
     ): WishlistItemPurchase {
         $claim = WishlistItemPurchase::firstOrCreate(
             ['wishlist_item_id' => $item->id],
             [
                 'purchased_by_user_id' => $claimer->id,
                 'status' => $status,
+                'price_paid' => $status === PurchaseStatus::Reserved ? null : $pricePaid,
                 'purchased_at' => Carbon::now(),
                 'note' => $note,
             ],
@@ -52,17 +54,25 @@ class PurchaseService
      * Advance a claim to a later lifecycle stage (bought, then delivered).
      *
      * No notification fires — the group was already told when it was reserved.
-     * Transition rules are enforced by the caller.
+     * Transition rules are enforced by the caller. The price paid is recorded
+     * when the claim becomes a purchase; later stages keep the one on file.
      */
-    public function advanceTo(WishlistItemPurchase $claim, PurchaseStatus $status): void
+    public function advanceTo(WishlistItemPurchase $claim, PurchaseStatus $status, ?string $pricePaid = null): void
     {
-        $claim->update(['status' => $status]);
+        $claim->status = $status;
+
+        if ($status === PurchaseStatus::Purchased) {
+            $claim->price_paid = $pricePaid;
+        }
+
+        $claim->save();
     }
 
     /**
      * Tell the rest of the group an item is taken so no one buys it twice.
      *
-     * The item's owner is excluded to preserve the surprise, as is the claimer,
+     * Only admins are told, since other members never see claim status. The
+     * item's owner is excluded to preserve the surprise, as is the claimer,
      * who already knows. Disabled accounts are skipped.
      */
     private function notifyGiftGivers(WishlistItem $item, User $claimer): void
@@ -70,6 +80,7 @@ class PurchaseService
         $recipients = User::query()
             ->whereNot('id', $item->user_id)
             ->whereNot('id', $claimer->id)
+            ->where('is_admin', true)
             ->whereNull('disabled_at')
             ->get();
 
@@ -98,6 +109,7 @@ class PurchaseService
 
     /**
      * Tell the claimer that details they may be buying against have changed.
+     * Only admins are told; other members never hear about their claims.
      *
      * Nothing is sent once the gift is delivered — it's too late to matter.
      *
@@ -107,7 +119,7 @@ class PurchaseService
     {
         $claim = $this->activeClaim($item);
 
-        if ($changes === [] || $claim === null) {
+        if ($changes === [] || $claim === null || ! $claim->purchasedBy->isAdmin()) {
             return;
         }
 
@@ -132,7 +144,10 @@ class PurchaseService
             $this->release($claim);
         }
 
-        $claim->purchasedBy->notify(new ClaimedItemRemoved($item, $reason, $claim->status));
+        // Members other than admins never hear about their claims.
+        if ($claim->purchasedBy->isAdmin()) {
+            $claim->purchasedBy->notify(new ClaimedItemRemoved($item, $reason, $claim->status));
+        }
     }
 
     /**

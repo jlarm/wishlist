@@ -12,8 +12,11 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
 
-    Route::get('settings/notifications', [NotificationController::class, 'edit'])->name('notifications.edit');
-    Route::patch('settings/notifications', [NotificationController::class, 'update'])->name('notifications.update');
+    // Every email preference is about buying gifts, which only admins do.
+    Route::middleware('admin')->group(function () {
+        Route::get('settings/notifications', [NotificationController::class, 'edit'])->name('notifications.edit');
+        Route::patch('settings/notifications', [NotificationController::class, 'update'])->name('notifications.update');
+    });
 
     Route::get('settings/occasions', [OccasionController::class, 'edit'])->name('occasions.edit');
     Route::post('settings/occasions', [OccasionController::class, 'store'])->name('occasions.store');

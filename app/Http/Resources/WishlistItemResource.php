@@ -12,9 +12,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @mixin WishlistItem
  *
  * Privacy boundary: this resource is the single place wishlist items become
- * Inertia props. Purchase data is ONLY ever added when the viewer is not the
- * item owner. The owner's payload never contains a purchase key, so purchase
- * status cannot leak through props, JSON, or page source.
+ * Inertia props. Purchase data is ONLY ever added for admins viewing someone
+ * else's item. Owners and non-admin members never get a purchase key (not even
+ * for their own claims), so claim status cannot leak through props, JSON, or
+ * page source.
  */
 class WishlistItemResource extends JsonResource
 {
@@ -65,8 +66,15 @@ class WishlistItemResource extends JsonResource
             ],
         ];
 
-        // Purchase data is exposed exclusively to non-owners. For the owner we
-        // deliberately omit every purchase-related key.
+        // Only admins buy gifts, so nobody else gets any claim data or controls.
+        if (! $isOwner && $viewer?->isAdmin() !== true) {
+            $data['can']['purchase'] = false;
+
+            return $data;
+        }
+
+        // Purchase data is exposed exclusively to admins who don't own the
+        // item. For the owner we deliberately omit every purchase-related key.
         if (! $isOwner) {
             $purchase = $this->whenLoaded('purchase');
             $hasPurchase = $this->relationLoaded('purchase') && $this->purchase !== null;
@@ -97,6 +105,12 @@ class WishlistItemResource extends JsonResource
                     && $this->purchase->status === PurchaseStatus::Reserved
                     && $this->purchase->reminded_at !== null,
                 'can_confirm' => $isMine && $this->purchase->status === PurchaseStatus::Reserved,
+                // What the giver paid, and the price when the item was added to
+                // compare it against. Only the giver themselves sees these.
+                'price_paid' => $isMine ? $this->purchase->price_paid : null,
+                'original_price' => $isMine && $this->relationLoaded('originalPrice')
+                    ? $this->originalPrice?->price
+                    : null,
             ] : null;
         }
 

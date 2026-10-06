@@ -51,7 +51,7 @@ class WishlistController extends Controller
             // Other viewers only see visible items, with purchase data attached.
             $items = $query
                 ->visible()
-                ->with(['purchase.purchasedBy', ...$recentHistory])
+                ->with(['purchase.purchasedBy', 'originalPrice', ...$recentHistory])
                 ->get();
         }
 

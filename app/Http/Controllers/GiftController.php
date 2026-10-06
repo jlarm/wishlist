@@ -24,7 +24,7 @@ class GiftController extends Controller
         $items = WishlistItem::query()
             ->whereHas('purchase', fn (Builder $query) => $query->where('purchased_by_user_id', $viewer->id))
             ->whereNot('user_id', $viewer->id)
-            ->with(['user', 'purchase.purchasedBy'])
+            ->with(['user', 'purchase.purchasedBy', 'originalPrice'])
             ->get()
             ->sortBy([
                 fn (WishlistItem $a, WishlistItem $b): int => strcasecmp($a->user->name, $b->user->name),
