@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Gift, LayoutGrid, Mail, Users } from '@lucide/vue';
+import { Gift, LayoutGrid, Mail, ReceiptText, Users } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as invitationsIndex } from '@/routes/admin/invitations';
+import { index as spendingIndex } from '@/routes/admin/spending';
 import { index as usersIndex } from '@/routes/admin/users';
 import { index as wishlistsIndex } from '@/routes/wishlists';
 import type { NavItem, User } from '@/types';
@@ -36,6 +37,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         items.push(
             { title: 'Invitations', href: invitationsIndex(), icon: Mail },
             { title: 'Users', href: usersIndex(), icon: Users },
+            { title: 'Spending', href: spendingIndex(), icon: ReceiptText },
         );
     }
 

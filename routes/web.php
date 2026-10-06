@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\InvitationController;
+use App\Http\Controllers\Admin\SpendingController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GiftController;
@@ -99,6 +100,8 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
+
+        Route::get('spending', [SpendingController::class, 'index'])->name('spending.index');
     });
 });
 
