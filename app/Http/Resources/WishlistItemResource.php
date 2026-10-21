@@ -83,6 +83,23 @@ class WishlistItemResource extends JsonResource
                 && ! $hasPurchase
                 && $viewer->can('purchase', $this->resource);
 
+            // Surprises only ever reach admins, so whose idea it was stays here.
+            $data['is_surprise'] = $this->is_surprise;
+            $data['added_by_name'] = $this->is_surprise && $this->relationLoaded('addedBy')
+                ? $this->addedBy?->name
+                : null;
+
+            // A surprise on the same list that looks like this wish, so it
+            // isn't bought twice. It can be merged in while the wish is free.
+            $match = $this->relationLoaded('surpriseMatch') ? $this->getRelation('surpriseMatch') : null;
+            $data['surprise_match'] = $match instanceof WishlistItem ? [
+                'id' => $match->id,
+                'title' => $match->title,
+                'added_by_name' => $match->relationLoaded('addedBy') ? $match->addedBy?->name : null,
+                'status' => $match->relationLoaded('purchase') ? $match->purchase?->status->value : null,
+                'can_merge' => $this->relationLoaded('purchase') && $this->purchase === null,
+            ] : null;
+
             // "is_purchased" here means the item is claimed (taken) in any state;
             // the precise reserved-vs-bought state lives in purchase.status.
             $data['is_purchased'] = $hasPurchase;

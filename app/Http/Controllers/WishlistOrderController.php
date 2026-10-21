@@ -21,12 +21,12 @@ class WishlistOrderController extends Controller
 
         $validated = $request->validate([
             'ids' => ['required', 'array', 'max:1000'],
-            'ids.*' => ['integer', 'distinct', Rule::exists('wishlist_items', 'id')->where('user_id', $user->id)->whereNull('deleted_at')],
+            'ids.*' => ['integer', 'distinct', Rule::exists('wishlist_items', 'id')->where('user_id', $user->id)->where('is_surprise', false)->whereNull('deleted_at')],
         ]);
 
         DB::transaction(function () use ($user, $validated): void {
             foreach (array_values($validated['ids']) as $index => $id) {
-                $user->wishlistItems()->whereKey($id)->update(['position' => $index + 1]);
+                $user->wishlistItems()->wishes()->whereKey($id)->update(['position' => $index + 1]);
             }
         });
 

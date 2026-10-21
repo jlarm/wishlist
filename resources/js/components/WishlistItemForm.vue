@@ -35,6 +35,9 @@ type WishlistItemFormData = {
     priority: string;
     notes: string;
     visibility_status: string;
+    // Only sent when adding a surprise for someone else.
+    claim_status: '' | 'reserved' | 'purchased';
+    price_paid: string;
 };
 
 const props = defineProps<{
@@ -50,6 +53,11 @@ const props = defineProps<{
     fallbackTitle?: string | null;
     // Details the bookmarklet already read off the store page, if any.
     sharedDetails?: SharedProduct | null;
+    // Whose list a surprise is on. Surprises are never hidden from admins, so
+    // the visibility choice is left out.
+    surpriseFor?: { id: number; name: string } | null;
+    // Offer to reserve or mark the surprise bought as it's added.
+    claimable?: boolean;
 }>();
 
 const form = useForm<WishlistItemFormData>({
@@ -64,7 +72,25 @@ const form = useForm<WishlistItemFormData>({
     priority: props.initial?.priority ?? 'medium',
     notes: props.initial?.notes ?? '',
     visibility_status: props.initial?.visibility_status ?? 'visible',
+    claim_status: '',
+    price_paid: '',
 });
+
+// Claim details only travel with a new surprise; everything else gets the
+// plain item fields.
+form.transform(({ claim_status, price_paid, ...item }) =>
+    props.surpriseFor && props.claimable
+        ? {
+              ...item,
+              for_user_id: props.surpriseFor.id,
+              claim_status: claim_status || null,
+              price_paid:
+                  claim_status === 'purchased' && price_paid !== ''
+                      ? price_paid
+                      : null,
+          }
+        : item,
+);
 
 const tagInput = ref('');
 const imageFailed = ref(false);
@@ -483,7 +509,7 @@ function submit() {
             <InputError :message="form.errors.tags" />
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-4" :class="surpriseFor ? '' : 'sm:grid-cols-2'">
             <div class="grid gap-2">
                 <Label for="priority">Priority</Label>
                 <select
@@ -501,7 +527,7 @@ function submit() {
                 </select>
                 <InputError :message="form.errors.priority" />
             </div>
-            <div class="grid gap-2">
+            <div v-if="!surpriseFor" class="grid gap-2">
                 <Label for="visibility_status">Visibility</Label>
                 <select
                     id="visibility_status"
@@ -528,6 +554,43 @@ function submit() {
                 placeholder="Anything else worth knowing"
             />
             <InputError :message="form.errors.notes" />
+        </div>
+
+        <!-- Claim a new surprise in the same step -->
+        <div
+            v-if="surpriseFor && claimable"
+            class="grid gap-4 rounded-xl border border-border bg-secondary/40 p-4 sm:grid-cols-2"
+        >
+            <div class="grid gap-2">
+                <Label for="claim_status">Status</Label>
+                <select
+                    id="claim_status"
+                    v-model="form.claim_status"
+                    :class="selectClass"
+                >
+                    <option value="">Just an idea</option>
+                    <option value="reserved">Reserved by me</option>
+                    <option value="purchased">Already bought</option>
+                </select>
+                <InputError :message="form.errors.claim_status" />
+            </div>
+            <div v-if="form.claim_status === 'purchased'" class="grid gap-2">
+                <Label for="price_paid">Price you paid (optional)</Label>
+                <Input
+                    id="price_paid"
+                    v-model="form.price_paid"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputmode="decimal"
+                    :placeholder="form.price || '0.00'"
+                />
+                <InputError :message="form.errors.price_paid" />
+            </div>
+            <p class="text-xs text-muted-foreground sm:col-span-2">
+                Only admins see this item. {{ surpriseFor.name }} won't see it
+                on their list.
+            </p>
         </div>
 
         <div class="flex items-center gap-3">

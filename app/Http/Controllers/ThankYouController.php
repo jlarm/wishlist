@@ -14,7 +14,7 @@ class ThankYouController extends Controller
      */
     public function store(Request $request, WishlistItem $wishlistItem): RedirectResponse
     {
-        $this->authorize('update', $wishlistItem);
+        $this->authorize('receive', $wishlistItem);
         abort_unless($wishlistItem->isReceived(), 422);
 
         $wishlistItem->thanked_at ??= Date::now();
@@ -28,7 +28,7 @@ class ThankYouController extends Controller
      */
     public function destroy(Request $request, WishlistItem $wishlistItem): RedirectResponse
     {
-        $this->authorize('update', $wishlistItem);
+        $this->authorize('receive', $wishlistItem);
 
         $wishlistItem->thanked_at = null;
         $wishlistItem->save();

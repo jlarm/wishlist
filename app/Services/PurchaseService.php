@@ -111,15 +111,20 @@ class PurchaseService
      * Tell the claimer that details they may be buying against have changed.
      * Only admins are told; other members never hear about their claims.
      *
-     * Nothing is sent once the gift is delivered — it's too late to matter.
+     * Nothing is sent once the gift is delivered — it's too late to matter,
+     * nor when the claimer made the change themselves (on a surprise item).
      *
      * @param  array<string, array{from: ?string, to: ?string}>  $changes
      */
-    public function alertClaimerOfChanges(WishlistItem $item, array $changes): void
+    public function alertClaimerOfChanges(WishlistItem $item, array $changes, ?User $changedBy = null): void
     {
         $claim = $this->activeClaim($item);
 
         if ($changes === [] || $claim === null || ! $claim->purchasedBy->isAdmin()) {
+            return;
+        }
+
+        if ($changedBy !== null && $claim->purchasedBy->is($changedBy)) {
             return;
         }
 
@@ -130,9 +135,10 @@ class PurchaseService
      * Tell the claimer an item they claimed was deleted, hidden, or received
      * elsewhere. A received item's reservation is released outright, since the
      * owner already has it; a bought claim is kept so the giver is still
-     * credited if it was their gift.
+     * credited if it was their gift. The claimer isn't told about a removal
+     * they made themselves.
      */
-    public function alertClaimerOfRemoval(WishlistItem $item, ClaimRemovalReason $reason): void
+    public function alertClaimerOfRemoval(WishlistItem $item, ClaimRemovalReason $reason, ?User $removedBy = null): void
     {
         $claim = $this->activeClaim($item);
 
@@ -145,7 +151,7 @@ class PurchaseService
         }
 
         // Members other than admins never hear about their claims.
-        if ($claim->purchasedBy->isAdmin()) {
+        if ($claim->purchasedBy->isAdmin() && ! $claim->purchasedBy->is($removedBy)) {
             $claim->purchasedBy->notify(new ClaimedItemRemoved($item, $reason, $claim->status));
         }
     }

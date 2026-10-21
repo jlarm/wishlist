@@ -184,6 +184,22 @@ function claimTooltip(item: WishlistItem): string {
                                     {{ item.availability_label }}
                                 </p>
                                 <p
+                                    v-if="item.surprise_match"
+                                    class="truncate text-xs font-semibold text-gold"
+                                    :title="`Possibly covered by the surprise “${item.surprise_match.title}”`"
+                                >
+                                    Possibly covered by “{{
+                                        item.surprise_match.title
+                                    }}”
+                                </p>
+                                <p
+                                    v-if="item.is_surprise"
+                                    class="truncate text-xs font-semibold text-gold"
+                                >
+                                    Added by
+                                    {{ item.added_by_name ?? 'an admin' }}
+                                </p>
+                                <p
                                     v-if="showOwner && item.owner_name"
                                     class="truncate text-xs text-muted-foreground"
                                 >

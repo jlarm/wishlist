@@ -27,14 +27,14 @@ class DashboardController extends Controller
         $users = $directory($user);
 
         // The viewer's own items never load purchase data (privacy boundary).
-        $myItemsCount = $user->wishlistItems()->count();
+        $myItemsCount = $user->wishlistItems()->wishes()->count();
 
         // Recent items from OTHER users — purchase data is allowed here.
         $recentItems = WishlistItem::query()
             ->visible()
             ->active()
             ->where('user_id', '!=', $user->id)
-            ->with(['user', 'purchase.purchasedBy', 'originalPrice'])
+            ->with(['user', 'addedBy', 'purchase.purchasedBy', 'originalPrice'])
             ->latest()
             ->limit(6)
             ->get();

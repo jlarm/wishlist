@@ -26,6 +26,7 @@ class ReceivedItemController extends Controller
     {
         $items = $request->user()
             ->wishlistItems()
+            ->wishes()
             ->received()
             ->latest('received_at')
             ->get()
@@ -49,7 +50,7 @@ class ReceivedItemController extends Controller
      */
     public function store(Request $request, WishlistItem $wishlistItem): RedirectResponse
     {
-        $this->authorize('update', $wishlistItem);
+        $this->authorize('receive', $wishlistItem);
 
         if (! $wishlistItem->isReceived()) {
             $wishlistItem->received_at = Date::now();
@@ -68,7 +69,7 @@ class ReceivedItemController extends Controller
      */
     public function destroy(Request $request, WishlistItem $wishlistItem): RedirectResponse
     {
-        $this->authorize('update', $wishlistItem);
+        $this->authorize('receive', $wishlistItem);
 
         $wishlistItem->received_at = null;
         $wishlistItem->thanked_at = null;

@@ -2,6 +2,7 @@
 import { Link, router } from '@inertiajs/vue3';
 import { ExternalLink } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import SurpriseMergeController from '@/actions/App/Http/Controllers/Admin/SurpriseMergeController';
 import ReceivedItemController from '@/actions/App/Http/Controllers/ReceivedItemController';
 import ReservationConfirmationController from '@/actions/App/Http/Controllers/ReservationConfirmationController';
 import WishlistItemController from '@/actions/App/Http/Controllers/WishlistItemController';
@@ -127,6 +128,23 @@ function markReceived() {
         ReceivedItemController.store(props.item.id).url,
         {},
         { preserveScroll: true },
+    );
+}
+
+// Fold the matching surprise's claim into this wish and drop the surprise.
+function mergeSurprise() {
+    if (!props.item.surprise_match) {
+        return;
+    }
+
+    processing.value = true;
+    router.post(
+        SurpriseMergeController.store(props.item.surprise_match.id).url,
+        { wish_id: props.item.id },
+        {
+            preserveScroll: true,
+            onFinish: () => (processing.value = false),
+        },
     );
 }
 
@@ -327,6 +345,56 @@ function deleteItem() {
             >
                 Release
             </Button>
+        </div>
+
+        <!-- Admins only: merge a matching surprise into this wish -->
+        <div v-if="item.surprise_match?.can_merge" :class="groupClass">
+            <ConfirmDialog
+                title="Merge the surprise into this wish?"
+                :description="`The surprise “${item.surprise_match.title}” will be removed, and anything claimed on it moves onto “${item.title}”. ${item.owner_name ?? 'They'} still won't see who has it.`"
+                confirm-label="Merge"
+                :processing="processing"
+                @confirm="mergeSurprise"
+            >
+                <template #trigger>
+                    <Button variant="ghost" size="sm" class="rounded-none">
+                        Merge surprise
+                    </Button>
+                </template>
+            </ConfirmDialog>
+        </div>
+
+        <!-- Admins look after surprises, which their owner never sees -->
+        <div
+            v-if="item.is_surprise && (item.can.update || item.can.delete)"
+            :class="groupClass"
+        >
+            <Button
+                v-if="item.can.update"
+                as-child
+                variant="ghost"
+                size="sm"
+                class="rounded-none"
+            >
+                <Link :href="WishlistItemController.edit(item.id).url">
+                    Edit
+                </Link>
+            </Button>
+
+            <ConfirmDialog
+                v-if="item.can.delete"
+                title="Delete this item?"
+                :description="`“${item.title}” will be removed from ${item.owner_name ? `${item.owner_name}'s` : 'their'} list.`"
+                confirm-label="Delete"
+                confirm-variant="destructive"
+                @confirm="deleteItem"
+            >
+                <template #trigger>
+                    <Button variant="ghost" size="sm" class="rounded-none">
+                        Delete
+                    </Button>
+                </template>
+            </ConfirmDialog>
         </div>
     </div>
 </template>

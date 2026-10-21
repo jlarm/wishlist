@@ -32,7 +32,7 @@ class ClaimedItemController extends Controller
             ->active()
             ->has('purchase')
             ->whereNot('user_id', $viewer->id)
-            ->with(['user', 'purchase.purchasedBy', 'originalPrice'])
+            ->with(['user', 'addedBy', 'purchase.purchasedBy', 'originalPrice'])
             ->get()
             ->sortBy([
                 fn (WishlistItem $a, WishlistItem $b): int => strcasecmp($a->user->name, $b->user->name),

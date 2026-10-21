@@ -8,6 +8,7 @@ use App\Enums\Priority;
 use App\Enums\VisibilityStatus;
 use App\Http\Requests\StoreWishlistItemRequest;
 use App\Http\Requests\UpdateWishlistItemRequest;
+use App\Models\User;
 use App\Models\WishlistItem;
 use App\Services\PurchaseService;
 use Illuminate\Http\RedirectResponse;
@@ -35,16 +36,24 @@ class WishlistItemController extends Controller
     public function __construct(private readonly PurchaseService $purchases) {}
 
     /**
-     * Show the form for creating a new wishlist item.
+     * Show the form for creating a new wishlist item. With "?for=" an admin
+     * adds a surprise to someone else's list instead of their own.
      */
     public function create(Request $request): Response
     {
-        $this->authorize('create', WishlistItem::class);
+        $recipient = $request->filled('for') ? User::query()->findOrFail($request->integer('for')) : null;
+
+        if ($recipient === null) {
+            $this->authorize('create', WishlistItem::class);
+        } else {
+            $this->authorize('createFor', [WishlistItem::class, $recipient]);
+        }
 
         return Inertia::render('WishlistItems/Create', [
             'priorities' => Priority::options(),
             'visibilities' => VisibilityStatus::options(),
             'prefill' => $this->sharedLink($request),
+            'recipient' => $recipient === null ? null : ['id' => $recipient->id, 'name' => $recipient->name],
         ]);
     }
 
@@ -82,15 +91,29 @@ class WishlistItemController extends Controller
     }
 
     /**
-     * Store a newly created wishlist item.
+     * Store a newly created wishlist item, either on the user's own list or as
+     * a surprise on someone else's, optionally claimed as it's added.
      */
     public function store(StoreWishlistItemRequest $request, RecordItemPrice $recordPrice): RedirectResponse
     {
         $user = $request->user();
+        $recipient = $request->recipient();
+        $owner = $recipient ?? $user;
 
-        // New wishes join the end of the owner's ranking.
-        $item = $user->wishlistItems()->make($request->validated());
-        $item->position = (int) $user->wishlistItems()->max('position') + 1;
+        // New items join the end of the owner's ranking.
+        $item = $owner->wishlistItems()->make(
+            $request->safe()->except(['for_user_id', 'claim_status', 'price_paid']),
+        );
+        $item->position = (int) $owner->wishlistItems()->max('position') + 1;
+
+        // Surprises are never hidden from the admins; only their owner is kept
+        // in the dark, which the is_surprise flag already takes care of.
+        if ($recipient !== null) {
+            $item->is_surprise = true;
+            $item->added_by_user_id = $user->id;
+            $item->visibility_status = VisibilityStatus::Visible;
+        }
+
         $item->save();
 
         // Seed the price history from the starting price so the chart begins
@@ -99,9 +122,24 @@ class WishlistItemController extends Controller
             $recordPrice($item, $item->price);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Item added to your wishlist.')]);
+        $claimStatus = $request->claimStatus();
 
-        return to_route('wishlists.show', $request->user());
+        if ($recipient !== null && $claimStatus !== null) {
+            $pricePaid = $request->validated('price_paid');
+
+            $this->purchases->claim(
+                $item,
+                $user,
+                $claimStatus,
+                pricePaid: $pricePaid === null ? null : number_format((float) $pricePaid, 2, '.', ''),
+            );
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $recipient === null
+            ? __('Item added to your wishlist.')
+            : __('Added to :name\'s list. Only admins can see it.', ['name' => $recipient->name])]);
+
+        return to_route('wishlists.show', $owner);
     }
 
     /**
@@ -127,6 +165,10 @@ class WishlistItemController extends Controller
                 'notes' => $wishlistItem->notes,
                 'visibility_status' => $wishlistItem->visibility_status->value,
             ],
+            // Whose list a surprise is on. Only admins can edit a surprise.
+            'recipient' => $wishlistItem->isSurprise()
+                ? ['id' => $wishlistItem->user->id, 'name' => $wishlistItem->user->name]
+                : null,
             'priorities' => Priority::options(),
             'visibilities' => VisibilityStatus::options(),
         ]);
@@ -138,6 +180,10 @@ class WishlistItemController extends Controller
     public function update(UpdateWishlistItemRequest $request, WishlistItem $wishlistItem): RedirectResponse
     {
         $wishlistItem->fill($request->validated());
+
+        if ($wishlistItem->isSurprise()) {
+            $wishlistItem->visibility_status = VisibilityStatus::Visible;
+        }
 
         $changes = collect(self::CLAIM_RELEVANT_FIELDS)
             ->filter(fn (string $label, string $field): bool => $wishlistItem->isDirty($field))
@@ -162,12 +208,12 @@ class WishlistItemController extends Controller
         if ($wasHidden) {
             $this->purchases->alertClaimerOfRemoval($wishlistItem, ClaimRemovalReason::Hidden);
         } else {
-            $this->purchases->alertClaimerOfChanges($wishlistItem, $changes);
+            $this->purchases->alertClaimerOfChanges($wishlistItem, $changes, $request->user());
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Item updated.')]);
 
-        return to_route('wishlists.show', $request->user());
+        return to_route('wishlists.show', $wishlistItem->user_id);
     }
 
     /**
@@ -179,10 +225,10 @@ class WishlistItemController extends Controller
 
         $wishlistItem->delete();
 
-        $this->purchases->alertClaimerOfRemoval($wishlistItem, ClaimRemovalReason::Deleted);
+        $this->purchases->alertClaimerOfRemoval($wishlistItem, ClaimRemovalReason::Deleted, $request->user());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Item deleted.')]);
 
-        return to_route('wishlists.show', $request->user());
+        return to_route('wishlists.show', $wishlistItem->user_id);
     }
 }

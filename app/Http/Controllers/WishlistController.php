@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Actions\GetWishlistDirectory;
 use App\Http\Resources\WishlistItemResource;
 use App\Models\User;
+use App\Models\WishlistItem;
+use App\Services\SurpriseMatcher;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,7 +26,7 @@ class WishlistController extends Controller
     /**
      * Show a single user's wishlist.
      */
-    public function show(Request $request, User $user): Response
+    public function show(Request $request, User $user, SurpriseMatcher $surpriseMatcher): Response
     {
         $viewer = $request->user();
         $isOwnWishlist = $viewer->id === $user->id;
@@ -43,16 +45,25 @@ class WishlistController extends Controller
 
         if ($isOwnWishlist) {
             // The owner sees all of their own items (including hidden ones) but
-            // NEVER any purchase data — the relationship is not even loaded.
+            // NEVER any purchase data — the relationship is not even loaded —
+            // nor the surprises admins have added for them.
             $items = $query
+                ->wishes()
                 ->with($recentHistory)
                 ->get();
         } else {
             // Other viewers only see visible items, with purchase data attached.
+            // Surprises are for admins only, so a sibling can't spoil them.
             $items = $query
                 ->visible()
-                ->with(['purchase.purchasedBy', 'originalPrice', ...$recentHistory])
+                ->unless($viewer->isAdmin(), fn ($query) => $query->wishes())
+                ->with(['addedBy', 'purchase.purchasedBy', 'originalPrice', ...$recentHistory])
                 ->get();
+
+            // Flag the owner's wishes an admin may already have covered.
+            if ($viewer->isAdmin()) {
+                $surpriseMatcher->attachMatches($items);
+            }
         }
 
         // Active members, for the header-style switcher that jumps between lists.
@@ -75,7 +86,9 @@ class WishlistController extends Controller
                 // Only the owner manages their own public link.
                 'share_token' => $isOwnWishlist ? $user->share_token : null,
                 'next_occasion' => $user->nextOccasion(),
-                'received_count' => $isOwnWishlist ? $user->wishlistItems()->received()->count() : null,
+                'received_count' => $isOwnWishlist ? $user->wishlistItems()->wishes()->received()->count() : null,
+                // Admins can slip a surprise onto anyone else's list.
+                'can_add_surprise' => $viewer->can('createFor', [WishlistItem::class, $user]),
             ],
             'items' => WishlistItemResource::collection($items)->resolve(),
             'people' => $people,

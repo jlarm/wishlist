@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ClaimedItemController;
 use App\Http\Controllers\Admin\InvitationController;
 use App\Http\Controllers\Admin\SpendingController;
+use App\Http\Controllers\Admin\SurpriseMergeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GiftController;
@@ -106,6 +107,8 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
         Route::get('spending', [SpendingController::class, 'index'])->name('spending.index');
         Route::get('claimed-items', [ClaimedItemController::class, 'index'])->name('claimed-items.index');
         Route::patch('claimed-items/{wishlistItem}', [ClaimedItemController::class, 'update'])->name('claimed-items.update');
+
+        Route::post('surprises/{wishlistItem}/merge', [SurpriseMergeController::class, 'store'])->name('surprises.merge');
     });
 });
 

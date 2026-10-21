@@ -43,6 +43,9 @@ class SpendingController extends Controller
             /** @var Collection<int, WishlistItem> $owned */
             $owned = $itemsByOwner->get($user->id, collect());
             $activeItems = $owned->whereNull('received_at');
+            // Only what they asked for themselves counts as requested. Leaving
+            // surprises out also keeps them off the viewer's own row.
+            $activeWishes = $activeItems->where('is_surprise', false);
 
             /** @var Collection<int, WishlistItem> $giving */
             $giving = $claimsByBuyer->get($user->id, collect());
@@ -54,9 +57,9 @@ class SpendingController extends Controller
                 'email' => $user->email,
                 'is_me' => $isViewer,
                 'is_disabled' => $user->isDisabled(),
-                'items_count' => $activeItems->count(),
-                'unpriced_count' => $activeItems->whereNull('price')->count(),
-                'requested_total' => $this->sumPrices($activeItems),
+                'items_count' => $activeWishes->count(),
+                'unpriced_count' => $activeWishes->whereNull('price')->count(),
+                'requested_total' => $this->sumPrices($activeWishes),
                 'unclaimed_total' => $isViewer
                     ? null
                     : $this->sumPrices($activeItems->filter(fn (WishlistItem $item): bool => $item->purchase === null)),
@@ -79,15 +82,15 @@ class SpendingController extends Controller
             ];
         });
 
-        $activeItems = $items->whereNull('received_at');
+        $activeWishes = $items->whereNull('received_at')->where('is_surprise', false);
         $claimedItems = $items->filter(fn (WishlistItem $item): bool => $item->purchase !== null);
 
         $othersClaimedItems = $claimedItems->reject(fn (WishlistItem $item): bool => $item->user_id === $viewer->id);
 
         return Inertia::render('Admin/Spending/Index', [
             'summary' => [
-                'requested_total' => $this->sumPrices($activeItems),
-                'items_count' => $activeItems->count(),
+                'requested_total' => $this->sumPrices($activeWishes),
+                'items_count' => $activeWishes->count(),
                 'spent_total' => $this->sumSpent($this->bought($claimedItems)),
                 'spent_vs_original' => $this->differenceFromOriginal($this->bought($claimedItems)),
                 'reserved_total' => $this->sumPrices($claimedItems->filter(

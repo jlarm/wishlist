@@ -25,6 +25,7 @@ class PublicWishlistController extends Controller
             ->firstOrFail();
 
         $items = $owner->wishlistItems()
+            ->wishes()
             ->visible()
             ->active()
             ->ranked()

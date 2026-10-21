@@ -23,6 +23,8 @@ const props = defineProps<{
     item: EditableItem;
     priorities: SelectOption[];
     visibilities: SelectOption[];
+    // Whose list a surprise is on, when editing one an admin added.
+    recipient: { id: number; name: string } | null;
 }>();
 
 const initial = {
@@ -53,10 +55,18 @@ const initial = {
                 Tidy up
             </p>
             <h1 class="mt-1 font-display text-3xl font-semibold">
-                Edit your wish
+                {{
+                    recipient
+                        ? `Edit the surprise for ${recipient.name}`
+                        : 'Edit your wish'
+                }}
             </h1>
             <p class="mt-1 text-sm text-muted-foreground">
-                Change your mind? Update the details below.
+                {{
+                    recipient
+                        ? `Only admins see this item. ${recipient.name} won't.`
+                        : 'Change your mind? Update the details below.'
+                }}
             </p>
         </div>
 
@@ -68,6 +78,7 @@ const initial = {
                 method="put"
                 submit-label="Save changes"
                 :initial="initial"
+                :surprise-for="recipient"
             />
         </div>
     </div>

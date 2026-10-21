@@ -18,6 +18,8 @@ const props = defineProps<{
     visibilities: SelectOption[];
     // A link handed over by the bookmarklet or the phone's share sheet.
     prefill: { url: string; title: string | null } | null;
+    // Set when an admin is adding a surprise to someone else's list.
+    recipient: { id: number; name: string } | null;
 }>();
 
 // Reads the product off any store page and opens this page with it.
@@ -32,7 +34,9 @@ const sharedDetails = props.prefill
 </script>
 
 <template>
-    <Head title="Add a wish" />
+    <Head
+        :title="recipient ? `Add an item for ${recipient.name}` : 'Add a wish'"
+    />
 
     <div class="mx-auto flex w-full max-w-2xl flex-col gap-6">
         <div
@@ -41,14 +45,21 @@ const sharedDetails = props.prefill
             <p
                 class="text-xs font-semibold tracking-[0.2em] text-gold uppercase"
             >
-                A new wish
+                {{ recipient ? 'A surprise' : 'A new wish' }}
             </p>
             <h1 class="mt-1 font-display text-3xl font-semibold">
-                Add to your list
+                {{
+                    recipient
+                        ? `Add to ${recipient.name}'s list`
+                        : 'Add to your list'
+                }}
             </h1>
             <p class="mt-1 text-sm text-muted-foreground">
-                The more detail you give, the easier you make the gift-givers'
-                job.
+                {{
+                    recipient
+                        ? `Something you'd like to get them, or already have. Only admins will see it. ${recipient.name} won't.`
+                        : "The more detail you give, the easier you make the gift-givers' job."
+                }}
             </p>
         </div>
 
@@ -58,18 +69,25 @@ const sharedDetails = props.prefill
                 :visibilities="visibilities"
                 :submit-url="store().url"
                 method="post"
-                submit-label="Add to my list"
+                :submit-label="
+                    recipient
+                        ? `Add to ${recipient.name}'s list`
+                        : 'Add to my list'
+                "
                 :initial="
                     props.prefill ? { url: props.prefill.url } : undefined
                 "
                 :auto-fetch="!!props.prefill"
                 :fallback-title="props.prefill?.title"
                 :shared-details="sharedDetails"
+                :surprise-for="recipient"
+                claimable
             />
         </div>
 
         <!-- Quick-add shortcuts -->
         <Collapsible
+            v-if="!recipient"
             class="rounded-3xl border-2 border-border bg-card px-6 py-4"
         >
             <CollapsibleTrigger

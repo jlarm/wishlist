@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Tag, TriangleAlert } from '@lucide/vue';
+import { Check, Gift, Tag, TriangleAlert } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PriceHistoryChart from '@/components/PriceHistoryChart.vue';
 import WishlistItemActions from '@/components/WishlistItemActions.vue';
@@ -121,6 +121,25 @@ const claimStatusLabel = computed(() => {
     }
 });
 
+// e.g. “Lego Castle” was bought by Mom as a surprise.
+const surpriseMatchSummary = computed(() => {
+    const match = props.item.surprise_match;
+
+    if (!match) {
+        return '';
+    }
+
+    const by = match.added_by_name ? ` by ${match.added_by_name}` : '';
+    const state =
+        match.status === 'purchased' || match.status === 'delivered'
+            ? 'bought'
+            : match.status === 'reserved'
+              ? 'reserved'
+              : 'added';
+
+    return `“${match.title}” was ${state}${by} as a surprise.`;
+});
+
 // Attribute the claimer for reserved/bought ("by name"). A delivered item just
 // reads "Delivered" — the name/"(you)" is dropped as it adds nothing there.
 const claimByline = computed(() => {
@@ -189,6 +208,14 @@ const claimByline = computed(() => {
                         class="text-xs text-muted-foreground"
                     >
                         For {{ item.owner_name }}
+                    </p>
+                    <!-- Admins only: the owner never sees this item -->
+                    <p
+                        v-if="item.is_surprise"
+                        class="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-gold"
+                    >
+                        <Gift class="size-3" />
+                        Added by {{ item.added_by_name ?? 'an admin' }}
                     </p>
                 </div>
                 <span
@@ -324,6 +351,20 @@ const claimByline = computed(() => {
                     class="mt-0.5 text-xs text-muted-foreground italic"
                 >
                     “{{ item.purchase.note }}”
+                </p>
+            </div>
+
+            <!-- Admins only: a surprise that may already cover this wish -->
+            <div
+                v-if="item.surprise_match"
+                class="rounded-lg border border-gold/40 bg-gold/10 px-3 py-2 text-sm"
+            >
+                <p class="flex items-start gap-1.5 font-semibold text-gold">
+                    <Gift class="mt-0.5 size-4 shrink-0" />
+                    Possibly already covered
+                </p>
+                <p class="mt-0.5 text-xs text-muted-foreground">
+                    {{ surpriseMatchSummary }}
                 </p>
             </div>
 

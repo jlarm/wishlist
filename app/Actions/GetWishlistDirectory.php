@@ -18,7 +18,7 @@ class GetWishlistDirectory
     {
         return User::query()
             ->whereNull('disabled_at')
-            ->withCount(['wishlistItems' => fn ($query) => $query->visible()->active()])
+            ->withCount(['wishlistItems' => fn ($query) => $query->wishes()->visible()->active()])
             ->with('occasions')
             ->orderBy('name')
             ->get()

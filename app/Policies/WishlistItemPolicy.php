@@ -25,6 +25,11 @@ class WishlistItemPolicy
             return false;
         }
 
+        // Surprises are for admins only, and never their owner.
+        if ($wishlistItem->isSurprise()) {
+            return $this->managesSurprise($user, $wishlistItem);
+        }
+
         if ($user->id === $wishlistItem->user_id) {
             return true;
         }
@@ -41,10 +46,28 @@ class WishlistItemPolicy
     }
 
     /**
+     * Determine whether the user can put a surprise item on the recipient's
+     * list. Only admins may, and never on their own list.
+     */
+    public function createFor(User $user, User $recipient): bool
+    {
+        return $user->isAdmin()
+            && ! $user->isDisabled()
+            && ! $recipient->isDisabled()
+            && $user->id !== $recipient->id;
+    }
+
+    /**
      * Determine whether the user can update the model.
+     *
+     * Surprises are looked after by the admins, never by their owner.
      */
     public function update(User $user, WishlistItem $wishlistItem): bool
     {
+        if ($wishlistItem->isSurprise()) {
+            return $this->managesSurprise($user, $wishlistItem);
+        }
+
         return $user->id === $wishlistItem->user_id;
     }
 
@@ -53,7 +76,17 @@ class WishlistItemPolicy
      */
     public function delete(User $user, WishlistItem $wishlistItem): bool
     {
-        return $user->id === $wishlistItem->user_id;
+        return $this->update($user, $wishlistItem);
+    }
+
+    /**
+     * Determine whether the user can archive the item as received or tick it
+     * off their thank-you list. Only the owner can, and only for their own
+     * wishes, since they never know about surprises.
+     */
+    public function receive(User $user, WishlistItem $wishlistItem): bool
+    {
+        return ! $wishlistItem->isSurprise() && $user->id === $wishlistItem->user_id;
     }
 
     /**
@@ -69,5 +102,15 @@ class WishlistItemPolicy
         }
 
         return $user->id !== $wishlistItem->user_id;
+    }
+
+    /**
+     * Whether the user is an active admin other than the surprise's owner.
+     */
+    private function managesSurprise(User $user, WishlistItem $wishlistItem): bool
+    {
+        return $user->isAdmin()
+            && ! $user->isDisabled()
+            && $user->id !== $wishlistItem->user_id;
     }
 }

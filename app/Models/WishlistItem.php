@@ -32,6 +32,8 @@ use Illuminate\Support\Carbon;
  * @property int $position
  * @property string|null $notes
  * @property VisibilityStatus $visibility_status
+ * @property bool $is_surprise
+ * @property int|null $added_by_user_id
  * @property CarbonImmutable|null $received_at
  * @property CarbonImmutable|null $thanked_at
  * @property Availability|null $availability
@@ -74,6 +76,7 @@ class WishlistItem extends Model
     protected $attributes = [
         'priority' => Priority::Medium->value,
         'visibility_status' => VisibilityStatus::Visible->value,
+        'is_surprise' => false,
     ];
 
     /**
@@ -87,6 +90,7 @@ class WishlistItem extends Model
             'price' => 'decimal:2',
             'priority' => Priority::class,
             'visibility_status' => VisibilityStatus::class,
+            'is_surprise' => 'boolean',
             'position' => 'integer',
             'received_at' => 'datetime',
             'thanked_at' => 'datetime',
@@ -156,6 +160,19 @@ class WishlistItem extends Model
     }
 
     /**
+     * The admin who put a surprise item on the owner's list.
+     *
+     * IMPORTANT: Surprise items must never reach their owner. See
+     * {@see scopeWishes()} and the WishlistItemPolicy.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function addedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'added_by_user_id');
+    }
+
+    /**
      * The purchase record for the wishlist item.
      *
      * IMPORTANT: Never expose this relationship to the item owner. Purchase data
@@ -199,6 +216,18 @@ class WishlistItem extends Model
     }
 
     /**
+     * Scope a query to the owner's own wishes, leaving out surprise items an
+     * admin added for them. Use this anywhere the owner or a non-admin could
+     * see the result.
+     *
+     * @param  Builder<WishlistItem>  $query
+     */
+    public function scopeWishes(Builder $query): void
+    {
+        $query->where('is_surprise', false);
+    }
+
+    /**
      * Scope a query to items still on the list (not yet received).
      *
      * @param  Builder<WishlistItem>  $query
@@ -226,6 +255,14 @@ class WishlistItem extends Model
     public function scopeRanked(Builder $query): void
     {
         $query->orderBy('position')->latest();
+    }
+
+    /**
+     * Determine if an admin added the item for the owner, who must never see it.
+     */
+    public function isSurprise(): bool
+    {
+        return $this->is_surprise;
     }
 
     /**

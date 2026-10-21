@@ -38,6 +38,17 @@ class WishlistItemFactory extends Factory
     }
 
     /**
+     * Indicate that an admin added the item as a surprise for its owner.
+     */
+    public function surprise(?User $addedBy = null): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'is_surprise' => true,
+            'added_by_user_id' => $addedBy ?? User::factory()->admin(),
+        ]);
+    }
+
+    /**
      * Indicate that the item is hidden.
      */
     public function hidden(): static

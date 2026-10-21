@@ -58,6 +58,20 @@ export type WishlistItem = {
     };
     is_purchased?: boolean;
     purchase?: PurchaseInfo | null;
+    // Admins only: an item an admin added that its owner never sees.
+    is_surprise?: boolean;
+    added_by_name?: string | null;
+    // Admins only: a surprise on the same list that looks like this wish.
+    surprise_match?: SurpriseMatch | null;
+};
+
+export type SurpriseMatch = {
+    id: number;
+    title: string;
+    added_by_name: string | null;
+    status: PurchaseInfo['status'] | null;
+    // Only while the wish itself is still unclaimed.
+    can_merge: boolean;
 };
 
 export type NextOccasion = {

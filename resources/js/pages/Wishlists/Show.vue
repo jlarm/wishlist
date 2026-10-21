@@ -57,6 +57,8 @@ const props = defineProps<{
         next_occasion: NextOccasion | null;
         // Owner only: how many gifts sit in their received archive.
         received_count: number | null;
+        // Admins viewing someone else's list may add a surprise to it.
+        can_add_surprise: boolean;
     };
     items: WishlistItem[];
     people: { id: number; name: string; is_me: boolean }[];
@@ -478,6 +480,13 @@ function copyWithFallback(text: string) {
                         <Link :href="createItem()">
                             <Plus class="size-4" />
                             Add a wish
+                        </Link>
+                    </Button>
+
+                    <Button v-if="owner.can_add_surprise" as-child>
+                        <Link :href="createItem({ query: { for: owner.id } })">
+                            <Plus class="size-4" />
+                            Add an item
                         </Link>
                     </Button>
                 </div>
