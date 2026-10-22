@@ -26,6 +26,7 @@ class UpdateNotificationPreferencesRequest extends FormRequest
             'notify_price_drops' => ['required', 'boolean'],
             'notify_gift_purchases' => ['required', 'boolean'],
             'notify_occasion_reminders' => ['required', 'boolean'],
+            'notify_shipment_updates' => ['required', 'boolean'],
         ];
     }
 }

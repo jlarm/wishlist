@@ -23,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property bool $notify_price_drops
  * @property bool $notify_gift_purchases
  * @property bool $notify_occasion_reminders
+ * @property bool $notify_shipment_updates
  * @property CarbonImmutable|null $disabled_at
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -49,6 +50,7 @@ class User extends Authenticatable
         'notify_price_drops' => true,
         'notify_gift_purchases' => true,
         'notify_occasion_reminders' => true,
+        'notify_shipment_updates' => true,
     ];
 
     /**
@@ -65,6 +67,7 @@ class User extends Authenticatable
             'notify_price_drops' => 'boolean',
             'notify_gift_purchases' => 'boolean',
             'notify_occasion_reminders' => 'boolean',
+            'notify_shipment_updates' => 'boolean',
             'disabled_at' => 'datetime',
         ];
     }

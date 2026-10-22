@@ -25,6 +25,7 @@ test('notification preferences can be updated', function () {
             'notify_price_drops' => false,
             'notify_gift_purchases' => true,
             'notify_occasion_reminders' => false,
+            'notify_shipment_updates' => false,
         ])
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('notifications.edit'));
@@ -34,6 +35,7 @@ test('notification preferences can be updated', function () {
     expect($user->notify_price_drops)->toBeFalse();
     expect($user->notify_gift_purchases)->toBeTrue();
     expect($user->notify_occasion_reminders)->toBeFalse();
+    expect($user->notify_shipment_updates)->toBeFalse();
 });
 
 test('members other than admins have no notification settings', function () {
@@ -47,7 +49,7 @@ test('both preferences are required booleans', function () {
 
     $this->actingAs($user)
         ->patch(route('notifications.update'), ['notify_price_drops' => 'yes'])
-        ->assertSessionHasErrors(['notify_price_drops', 'notify_gift_purchases', 'notify_occasion_reminders']);
+        ->assertSessionHasErrors(['notify_price_drops', 'notify_gift_purchases', 'notify_occasion_reminders', 'notify_shipment_updates']);
 });
 
 test('price-drop emails are suppressed when the recipient opts out', function () {

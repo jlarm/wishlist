@@ -23,6 +23,7 @@ class NotificationController extends Controller
                 'notify_price_drops' => $user->notify_price_drops,
                 'notify_gift_purchases' => $user->notify_gift_purchases,
                 'notify_occasion_reminders' => $user->notify_occasion_reminders,
+                'notify_shipment_updates' => $user->notify_shipment_updates,
             ],
         ]);
     }
@@ -39,6 +40,7 @@ class NotificationController extends Controller
         $user->notify_price_drops = $request->boolean('notify_price_drops');
         $user->notify_gift_purchases = $request->boolean('notify_gift_purchases');
         $user->notify_occasion_reminders = $request->boolean('notify_occasion_reminders');
+        $user->notify_shipment_updates = $request->boolean('notify_shipment_updates');
         $user->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Notification preferences updated.')]);

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\PurchaseStatus;
 use App\Enums\TrackingStatus;
 use App\Models\WishlistItemPurchase;
+use App\Notifications\ShipmentStatusChanged;
 use App\Services\PurchaseService;
 use App\Services\ShipmentTracker;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -60,7 +61,8 @@ class TrackShipment implements ShouldBeUnique, ShouldQueue
 
     /**
      * Pull the shipment's latest status. Once the carrier reports it delivered,
-     * the claim itself moves to delivered so the giver doesn't have to.
+     * the claim itself moves to delivered so the giver doesn't have to. The
+     * giver is emailed whenever the shipment moves to a new stage.
      */
     public function handle(ShipmentTracker $tracker, PurchaseService $purchases): void
     {
@@ -79,6 +81,8 @@ class TrackShipment implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        $previousStatus = $purchase->tracking_status;
+
         $purchase->fill([
             'tracker_id' => $shipment['tracker_id'],
             'tracking_status' => $shipment['status'],
@@ -92,6 +96,25 @@ class TrackShipment implements ShouldBeUnique, ShouldQueue
         if ($shipment['status'] === TrackingStatus::Delivered && $purchase->status === PurchaseStatus::Purchased) {
             $purchases->advanceTo($purchase, PurchaseStatus::Delivered);
         }
+
+        if ($shipment['status'] !== $previousStatus) {
+            $this->notifyGiver($shipment['status']);
+        }
+    }
+
+    /**
+     * Email the giver about a new stage. "Label created" isn't news, and a
+     * disabled giver isn't told.
+     */
+    private function notifyGiver(TrackingStatus $status): void
+    {
+        $giver = $this->purchase->purchasedBy;
+
+        if ($status === TrackingStatus::Pending || $giver === null || $giver->isDisabled()) {
+            return;
+        }
+
+        $giver->notify(new ShipmentStatusChanged($this->purchase));
     }
 
     /**

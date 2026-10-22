@@ -7,7 +7,9 @@ use App\Jobs\TrackShipment;
 use App\Models\User;
 use App\Models\WishlistItem;
 use App\Models\WishlistItemPurchase;
+use App\Notifications\ShipmentStatusChanged;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 
 /**
@@ -319,6 +321,84 @@ test('a delivered shipment marks the gift delivered', function () {
     $claim->refresh();
     expect($claim->tracking_status)->toBe(TrackingStatus::Delivered);
     expect($claim->status)->toBe(PurchaseStatus::Delivered);
+});
+
+test('the giver is emailed when the shipment moves to a new stage', function () {
+    Notification::fake();
+    Http::preventStrayRequests();
+    Http::fake([
+        'api.17track.net/track/v2.4/gettrackinfo' => Http::response(seventeenTrackInfo('OutForDelivery')),
+    ]);
+    config(['services.seventeen_track.key' => 'test-key']);
+
+    $giver = User::factory()->admin()->create();
+    $claim = WishlistItemPurchase::factory()->for($giver, 'purchasedBy')->tracked()->create([
+        'tracker_id' => '100002',
+        'tracking_status' => TrackingStatus::InTransit,
+    ]);
+
+    TrackShipment::dispatchSync($claim);
+
+    Notification::assertSentTo($giver, ShipmentStatusChanged::class, fn (ShipmentStatusChanged $notification): bool => $notification->purchase->is($claim));
+});
+
+test('no email is sent when the stage has not changed or is just a label', function (?TrackingStatus $before, string $after) {
+    Notification::fake();
+    Http::preventStrayRequests();
+    Http::fake([
+        'api.17track.net/track/v2.4/gettrackinfo' => Http::response(seventeenTrackInfo($after)),
+    ]);
+    config(['services.seventeen_track.key' => 'test-key']);
+
+    WishlistItemPurchase::factory()->tracked()->create([
+        'tracker_id' => '100002',
+        'tracking_status' => $before,
+    ]);
+
+    TrackShipment::dispatchSync(WishlistItemPurchase::sole());
+
+    Notification::assertNothingSent();
+})->with([
+    'still in transit' => [TrackingStatus::InTransit, 'InTransit'],
+    'label created' => [null, 'InfoReceived'],
+]);
+
+test('a disabled giver is not emailed', function () {
+    Notification::fake();
+    Http::preventStrayRequests();
+    Http::fake([
+        'api.17track.net/track/v2.4/gettrackinfo' => Http::response(seventeenTrackInfo('Delivered')),
+    ]);
+    config(['services.seventeen_track.key' => 'test-key']);
+
+    $giver = User::factory()->admin()->create(['disabled_at' => now()]);
+    $claim = WishlistItemPurchase::factory()->for($giver, 'purchasedBy')->tracked()->create(['tracker_id' => '100002']);
+
+    TrackShipment::dispatchSync($claim);
+
+    Notification::assertNothingSent();
+});
+
+test('shipment emails are suppressed when the giver opts out', function () {
+    $notification = new ShipmentStatusChanged(WishlistItemPurchase::factory()->tracked()->create());
+
+    expect($notification->via(User::factory()->create(['notify_shipment_updates' => true])))->toBe(['mail']);
+    expect($notification->via(User::factory()->create(['notify_shipment_updates' => false])))->toBe([]);
+});
+
+test('the shipment email names the stage and links to the carrier', function () {
+    $owner = User::factory()->create(['name' => 'Sam']);
+    $item = WishlistItem::factory()->for($owner)->create(['title' => 'Lego Castle']);
+    $claim = WishlistItemPurchase::factory()->for($item)->tracked()->create([
+        'tracking_status' => TrackingStatus::OutForDelivery,
+        'tracking_detail' => 'Out for delivery – Chicago, IL',
+    ]);
+
+    $mail = (new ShipmentStatusChanged($claim))->toMail($claim->purchasedBy);
+
+    expect($mail->subject)->toBe('Lego Castle is out for delivery');
+    expect($mail->introLines)->toContain('The gift you bought for Sam, "Lego Castle", is now: out for delivery.');
+    expect($mail->actionUrl)->toBe('https://www.ups.com/track?tracknum=1Z999AA10123456784');
 });
 
 test('the command looks up only bought gifts with tracking', function () {
