@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\Carrier;
 use App\Enums\PurchaseStatus;
 use App\Models\User;
 use App\Models\WishlistItem;
@@ -36,6 +37,17 @@ class WishlistItemPurchaseFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'status' => PurchaseStatus::Purchased,
+        ]);
+    }
+
+    /**
+     * Indicate that the bought gift has a UPS tracking number.
+     */
+    public function tracked(): static
+    {
+        return $this->purchased()->state(fn (array $attributes): array => [
+            'tracking_number' => '1Z999AA10123456784',
+            'carrier' => Carrier::Ups,
         ]);
     }
 }

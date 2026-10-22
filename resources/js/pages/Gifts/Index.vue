@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { ChevronRight, Clock, Gift, ShoppingBag } from '@lucide/vue';
 import { computed } from 'vue';
+import ShipmentStatus from '@/components/ShipmentStatus.vue';
 import WishlistItemActions from '@/components/WishlistItemActions.vue';
 import {
     index as wishlistsIndex,
@@ -231,6 +232,11 @@ const statusLabels: Record<string, string> = {
                                     · Still getting this?
                                 </span>
                             </div>
+                            <ShipmentStatus
+                                v-if="item.purchase"
+                                :purchase="item.purchase"
+                                class="mt-1"
+                            />
                         </div>
                     </div>
                     <WishlistItemActions

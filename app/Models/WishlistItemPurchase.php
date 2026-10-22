@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\Carrier;
 use App\Enums\PurchaseStatus;
+use App\Enums\TrackingStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\WishlistItemPurchaseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,6 +18,13 @@ use Illuminate\Support\Carbon;
  * @property int $purchased_by_user_id
  * @property PurchaseStatus $status
  * @property string|null $price_paid
+ * @property string|null $tracking_number
+ * @property Carrier|null $carrier
+ * @property string|null $tracker_id
+ * @property TrackingStatus|null $tracking_status
+ * @property string|null $tracking_detail
+ * @property CarbonImmutable|null $tracking_estimated_delivery_at
+ * @property CarbonImmutable|null $tracking_checked_at
  * @property Carbon $purchased_at
  * @property CarbonImmutable|null $confirmed_at
  * @property CarbonImmutable|null $reminded_at
@@ -38,6 +47,13 @@ class WishlistItemPurchase extends Model
         'purchased_by_user_id',
         'status',
         'price_paid',
+        'tracking_number',
+        'carrier',
+        'tracker_id',
+        'tracking_status',
+        'tracking_detail',
+        'tracking_estimated_delivery_at',
+        'tracking_checked_at',
         'purchased_at',
         'confirmed_at',
         'reminded_at',
@@ -63,10 +79,27 @@ class WishlistItemPurchase extends Model
         return [
             'status' => PurchaseStatus::class,
             'price_paid' => 'decimal:2',
+            'carrier' => Carrier::class,
+            'tracking_status' => TrackingStatus::class,
+            'tracking_estimated_delivery_at' => 'date',
+            'tracking_checked_at' => 'datetime',
             'purchased_at' => 'datetime',
             'confirmed_at' => 'datetime',
             'reminded_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The carrier's public tracking page, or null without a tracking number or
+     * a carrier we can link to.
+     */
+    public function trackingUrl(): ?string
+    {
+        if ($this->tracking_number === null) {
+            return null;
+        }
+
+        return $this->carrier?->trackingUrl($this->tracking_number);
     }
 
     /**

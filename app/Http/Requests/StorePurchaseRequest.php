@@ -35,6 +35,20 @@ class StorePurchaseRequest extends FormRequest
             'note' => ['nullable', 'string', 'max:1000'],
             // What the giver actually paid; only kept when buying outright.
             'price_paid' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
+            // An optional tracking number, also only kept when buying outright.
+            'tracking_number' => ['nullable', 'string', 'regex:/^[A-Za-z0-9\s-]{6,64}$/'],
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'tracking_number.regex' => __('That doesn\'t look like a tracking number.'),
         ];
     }
 }

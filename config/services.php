@@ -45,4 +45,9 @@ return [
         'premium_proxy' => env('SCRAPINGBEE_PREMIUM_PROXY', false),
     ],
 
+    // Live shipment tracking. Leave unset to only link to carrier sites.
+    'seventeen_track' => [
+        'key' => env('SEVENTEEN_TRACK_API_KEY'),
+    ],
+
 ];

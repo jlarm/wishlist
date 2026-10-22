@@ -37,6 +37,13 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->onOneServer()
             ->environments(['production']);
+
+        // Refresh shipment status for gifts that are on their way.
+        $schedule->command('shipments:track')
+            ->everyFourHours()
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->environments(['production']);
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // Cloudflare proxies every request, so honor its X-Forwarded-* headers.

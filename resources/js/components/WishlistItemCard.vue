@@ -2,6 +2,7 @@
 import { Check, Gift, Tag, TriangleAlert } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PriceHistoryChart from '@/components/PriceHistoryChart.vue';
+import ShipmentStatus from '@/components/ShipmentStatus.vue';
 import WishlistItemActions from '@/components/WishlistItemActions.vue';
 import type { WishlistItem } from '@/types';
 
@@ -352,6 +353,11 @@ const claimByline = computed(() => {
                 >
                     “{{ item.purchase.note }}”
                 </p>
+                <ShipmentStatus
+                    v-if="item.purchase"
+                    :purchase="item.purchase"
+                    class="mt-1.5"
+                />
             </div>
 
             <!-- Admins only: a surprise that may already cover this wish -->

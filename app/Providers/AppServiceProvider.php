@@ -40,6 +40,9 @@ class AppServiceProvider extends ServiceProvider
         // retailer sites and bounds ScrapingBee spend. Limited jobs are
         // released and retried, not dropped.
         RateLimiter::for('price-checks', fn (): Limit => Limit::perMinute(20));
+
+        // 17TRACK allows 3 requests a second; a lookup makes one or two.
+        RateLimiter::for('shipment-tracking', fn (): Limit => Limit::perMinute(60));
     }
 
     /**

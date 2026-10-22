@@ -2,6 +2,7 @@
 import { router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import ClaimedItemController from '@/actions/App/Http/Controllers/Admin/ClaimedItemController';
+import ShipmentStatus from '@/components/ShipmentStatus.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -303,6 +304,12 @@ function claimTooltip(item: WishlistItem): string {
                             Available
                         </span>
                         <span v-else class="text-muted-foreground">—</span>
+                        <ShipmentStatus
+                            v-if="item.purchase"
+                            :purchase="item.purchase"
+                            compact
+                            class="mt-1 whitespace-nowrap"
+                        />
                     </td>
 
                     <!-- Actions -->

@@ -26,13 +26,17 @@ class WishlistItemPurchaseController extends Controller
 
         $status = PurchaseStatus::tryFrom($request->validated('status') ?? '') ?? PurchaseStatus::Reserved;
 
-        $this->purchases->claim(
+        $claim = $this->purchases->claim(
             $wishlistItem,
             $request->user(),
             $status,
             $request->validated('note'),
             $this->normalizePrice($request->validated('price_paid')),
         );
+
+        if ($status === PurchaseStatus::Purchased && $claim->wasRecentlyCreated) {
+            $this->purchases->updateTracking($claim, $request->validated('tracking_number'));
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $status === PurchaseStatus::Purchased
             ? __('Marked as bought. The group will know it\'s taken.')
@@ -55,6 +59,9 @@ class WishlistItemPurchaseController extends Controller
         $validated = $request->validate([
             'status' => ['required', Rule::in([PurchaseStatus::Purchased->value, PurchaseStatus::Delivered->value])],
             'price_paid' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
+            'tracking_number' => ['nullable', 'string', 'regex:/^[A-Za-z0-9\s-]{6,64}$/'],
+        ], [
+            'tracking_number.regex' => __('That doesn\'t look like a tracking number.'),
         ]);
 
         $target = PurchaseStatus::from($validated['status']);
@@ -68,6 +75,10 @@ class WishlistItemPurchaseController extends Controller
         abort_unless($isValidTransition, 422);
 
         $this->purchases->advanceTo($claim, $target, $this->normalizePrice($validated['price_paid'] ?? null));
+
+        if ($target === PurchaseStatus::Purchased && isset($validated['tracking_number'])) {
+            $this->purchases->updateTracking($claim, $validated['tracking_number']);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $target === PurchaseStatus::Delivered
             ? __('Marked as delivered.')

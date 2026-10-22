@@ -18,7 +18,24 @@ export type PurchaseInfo = {
     // Only sent to the giver who claimed it.
     price_paid: string | null;
     original_price: string | null;
+    // Shipment status, shown to every admin.
+    tracking_status: TrackingStatus | null;
+    tracking_status_label: string | null;
+    tracking_detail: string | null;
+    tracking_estimated_delivery_at: string | null;
+    tracking_checked_at: string | null;
+    // Only sent to the giver who claimed it.
+    tracking_number: string | null;
+    carrier: Carrier | null;
+    carrier_label: string | null;
+    tracking_url: string | null;
+    can_edit_tracking: boolean;
 };
+
+export type TrackingStatus =
+    'pending' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'exception';
+
+export type Carrier = 'ups' | 'usps' | 'fedex' | 'dhl' | 'amazon' | 'other';
 
 export type PricePoint = {
     price: string;

@@ -128,6 +128,18 @@ class WishlistItemResource extends JsonResource
                 'original_price' => $isMine && $this->relationLoaded('originalPrice')
                     ? $this->originalPrice?->price
                     : null,
+                // Where the gift is. Every admin sees the status; the number
+                // and its link stay with the giver, like the price paid.
+                'tracking_status' => $this->purchase->tracking_status?->value,
+                'tracking_status_label' => $this->purchase->tracking_status?->label(),
+                'tracking_detail' => $this->purchase->tracking_detail,
+                'tracking_estimated_delivery_at' => $this->purchase->tracking_estimated_delivery_at?->toDateString(),
+                'tracking_checked_at' => $this->purchase->tracking_checked_at?->toIso8601String(),
+                'tracking_number' => $isMine ? $this->purchase->tracking_number : null,
+                'carrier' => $isMine ? $this->purchase->carrier?->value : null,
+                'carrier_label' => $isMine ? $this->purchase->carrier?->label() : null,
+                'tracking_url' => $isMine ? $this->purchase->trackingUrl() : null,
+                'can_edit_tracking' => $isMine && $this->purchase->status !== PurchaseStatus::Reserved,
             ] : null;
         }
 

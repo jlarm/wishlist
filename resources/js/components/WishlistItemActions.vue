@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
 import { ExternalLink } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import SurpriseMergeController from '@/actions/App/Http/Controllers/Admin/SurpriseMergeController';
 import ReceivedItemController from '@/actions/App/Http/Controllers/ReceivedItemController';
 import ReservationConfirmationController from '@/actions/App/Http/Controllers/ReservationConfirmationController';
+import ShipmentTrackingController from '@/actions/App/Http/Controllers/ShipmentTrackingController';
 import WishlistItemController from '@/actions/App/Http/Controllers/WishlistItemController';
 import WishlistItemPurchaseController from '@/actions/App/Http/Controllers/WishlistItemPurchaseController';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
@@ -12,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import type { WishlistItem } from '@/types';
+import type { Carrier, WishlistItem } from '@/types';
 
 const props = defineProps<{
     item: WishlistItem;
@@ -25,7 +26,30 @@ const props = defineProps<{
 const purchaseNote = ref('');
 // What the giver actually paid, asked for whenever they mark it bought.
 const pricePaid = ref<string | number>('');
+// Optional tracking number, asked for alongside the price when buying.
+const newTrackingNumber = ref('');
+// The tracking dialog edits whatever is on file, so keep it in step.
+const trackingNumber = ref(props.item.purchase?.tracking_number ?? '');
+const carrier = ref<Carrier | ''>(props.item.purchase?.carrier ?? '');
 const processing = ref(false);
+
+const carrierOptions: { value: Carrier | ''; label: string }[] = [
+    { value: '', label: 'Detect automatically' },
+    { value: 'ups', label: 'UPS' },
+    { value: 'usps', label: 'USPS' },
+    { value: 'fedex', label: 'FedEx' },
+    { value: 'dhl', label: 'DHL' },
+    { value: 'amazon', label: 'Amazon' },
+    { value: 'other', label: 'Other' },
+];
+
+watch(
+    () => [props.item.purchase?.tracking_number, props.item.purchase?.carrier],
+    ([number, savedCarrier]) => {
+        trackingNumber.value = number ?? '';
+        carrier.value = (savedCarrier as Carrier | null | undefined) ?? '';
+    },
+);
 
 const pricePaidPayload = computed(() =>
     pricePaid.value === '' || pricePaid.value === null
@@ -41,6 +65,7 @@ const hasClaimActions = computed(
         props.item.purchase?.can_mark_bought ||
         props.item.purchase?.can_mark_delivered ||
         props.item.purchase?.needs_confirmation ||
+        props.item.purchase?.can_edit_tracking ||
         (props.item.is_purchased && props.item.purchase?.can_unmark),
 );
 
@@ -70,12 +95,17 @@ function buyOutright() {
     processing.value = true;
     router.post(
         WishlistItemPurchaseController.store(props.item.id).url,
-        { status: 'purchased', price_paid: pricePaidPayload.value },
+        {
+            status: 'purchased',
+            price_paid: pricePaidPayload.value,
+            tracking_number: newTrackingNumber.value || null,
+        },
         {
             preserveScroll: true,
             onFinish: () => {
                 processing.value = false;
                 pricePaid.value = '';
+                newTrackingNumber.value = '';
             },
         },
     );
@@ -86,16 +116,48 @@ function advanceClaim(status: 'purchased' | 'delivered') {
     router.patch(
         WishlistItemPurchaseController.update(props.item.id).url,
         status === 'purchased'
-            ? { status, price_paid: pricePaidPayload.value }
+            ? {
+                  status,
+                  price_paid: pricePaidPayload.value,
+                  tracking_number: newTrackingNumber.value || null,
+              }
             : { status },
         {
             preserveScroll: true,
             onFinish: () => {
                 processing.value = false;
                 pricePaid.value = '';
+                newTrackingNumber.value = '';
             },
         },
     );
+}
+
+function saveTracking() {
+    processing.value = true;
+    router.put(
+        ShipmentTrackingController.update(props.item.id).url,
+        {
+            tracking_number: trackingNumber.value,
+            carrier: carrier.value || null,
+        },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                processing.value = false;
+            },
+        },
+    );
+}
+
+function removeTracking() {
+    processing.value = true;
+    router.delete(ShipmentTrackingController.destroy(props.item.id).url, {
+        preserveScroll: true,
+        onFinish: () => {
+            processing.value = false;
+        },
+    });
 }
 
 function release() {
@@ -277,6 +339,15 @@ function deleteItem() {
                     <p class="text-xs text-muted-foreground">
                         Leave blank to use the listed price.
                     </p>
+                    <Label :for="`tracking-number-${item.id}`" class="mt-2">
+                        Tracking number (optional)
+                    </Label>
+                    <Input
+                        :id="`tracking-number-${item.id}`"
+                        v-model="newTrackingNumber"
+                        autocomplete="off"
+                        placeholder="e.g. 1Z999AA10123456784"
+                    />
                 </div>
             </ConfirmDialog>
 
@@ -321,6 +392,70 @@ function deleteItem() {
                     <p class="text-xs text-muted-foreground">
                         Leave blank to use the listed price.
                     </p>
+                    <Label :for="`tracking-number-${item.id}`" class="mt-2">
+                        Tracking number (optional)
+                    </Label>
+                    <Input
+                        :id="`tracking-number-${item.id}`"
+                        v-model="newTrackingNumber"
+                        autocomplete="off"
+                        placeholder="e.g. 1Z999AA10123456784"
+                    />
+                </div>
+            </ConfirmDialog>
+
+            <ConfirmDialog
+                v-if="item.purchase?.can_edit_tracking"
+                :title="
+                    item.purchase.tracking_number
+                        ? 'Update tracking'
+                        : 'Add tracking'
+                "
+                :description="`Follow where “${item.title}” is. The carrier is worked out from the number unless you pick one.`"
+                confirm-label="Save tracking"
+                :processing="processing"
+                @confirm="saveTracking"
+            >
+                <template #trigger>
+                    <Button variant="ghost" size="sm" class="rounded-none">
+                        Tracking
+                    </Button>
+                </template>
+                <div class="grid gap-2">
+                    <Label :for="`tracking-edit-${item.id}`">
+                        Tracking number
+                    </Label>
+                    <Input
+                        :id="`tracking-edit-${item.id}`"
+                        v-model="trackingNumber"
+                        autocomplete="off"
+                        placeholder="e.g. 1Z999AA10123456784"
+                    />
+                    <Label :for="`carrier-${item.id}`" class="mt-2">
+                        Carrier
+                    </Label>
+                    <select
+                        :id="`carrier-${item.id}`"
+                        v-model="carrier"
+                        class="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    >
+                        <option
+                            v-for="option in carrierOptions"
+                            :key="option.value"
+                            :value="option.value"
+                        >
+                            {{ option.label }}
+                        </option>
+                    </select>
+                    <button
+                        v-if="item.purchase.tracking_number"
+                        type="button"
+                        class="justify-self-start text-xs text-muted-foreground underline-offset-2 hover:text-cranberry hover:underline"
+                        :disabled="processing"
+                        @click="removeTracking"
+                    >
+                        Remove tracking
+                    </button>
                 </div>
             </ConfirmDialog>
 

@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Enums\Carrier;
 use App\Enums\ClaimRemovalReason;
 use App\Enums\PurchaseStatus;
+use App\Jobs\TrackShipment;
 use App\Models\User;
 use App\Models\WishlistItem;
 use App\Models\WishlistItemPurchase;
@@ -15,6 +17,8 @@ use Illuminate\Support\Facades\Notification;
 
 class PurchaseService
 {
+    public function __construct(private readonly ShipmentTracker $tracker) {}
+
     /**
      * Claim a wishlist item for the given user. Reserving (a soft "I'm planning
      * to get this" hold) is the default, but a giver can skip straight to a
@@ -66,6 +70,61 @@ class PurchaseService
         }
 
         $claim->save();
+    }
+
+    /**
+     * Set, change or clear a claim's tracking number. The carrier is detected
+     * from the number unless one is given. A new number starts its status over
+     * and, when live tracking is on, is looked up straight away.
+     */
+    public function updateTracking(WishlistItemPurchase $claim, ?string $trackingNumber, ?Carrier $carrier = null): void
+    {
+        $trackingNumber = self::normalizeTrackingNumber($trackingNumber);
+
+        if ($trackingNumber === null) {
+            $claim->fill([
+                'tracking_number' => null,
+                'carrier' => null,
+                'tracker_id' => null,
+                'tracking_status' => null,
+                'tracking_detail' => null,
+                'tracking_estimated_delivery_at' => null,
+                'tracking_checked_at' => null,
+            ])->save();
+
+            return;
+        }
+
+        $carrier ??= Carrier::detect($trackingNumber);
+
+        if ($claim->tracking_number === $trackingNumber && $claim->carrier === $carrier) {
+            return;
+        }
+
+        $claim->fill([
+            'tracking_number' => $trackingNumber,
+            'carrier' => $carrier,
+            'tracker_id' => null,
+            'tracking_status' => null,
+            'tracking_detail' => null,
+            'tracking_estimated_delivery_at' => null,
+            'tracking_checked_at' => null,
+        ])->save();
+
+        if ($this->tracker->isEnabled() && $claim->status === PurchaseStatus::Purchased) {
+            TrackShipment::dispatch($claim);
+        }
+    }
+
+    /**
+     * Strip the spaces and dashes people paste in and uppercase the rest, or
+     * null when nothing is left.
+     */
+    public static function normalizeTrackingNumber(?string $trackingNumber): ?string
+    {
+        $normalized = strtoupper((string) preg_replace('/[\s-]+/', '', (string) $trackingNumber));
+
+        return $normalized === '' ? null : $normalized;
     }
 
     /**

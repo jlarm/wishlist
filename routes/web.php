@@ -12,6 +12,7 @@ use App\Http\Controllers\ProductMetadataController;
 use App\Http\Controllers\PublicWishlistController;
 use App\Http\Controllers\ReceivedItemController;
 use App\Http\Controllers\ReservationConfirmationController;
+use App\Http\Controllers\ShipmentTrackingController;
 use App\Http\Controllers\ThankYouController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\WishlistItemController;
@@ -89,6 +90,8 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
     Route::patch('wishlist-items/{wishlistItem}/purchase', [WishlistItemPurchaseController::class, 'update'])->name('wishlist-items.purchase.update');
     Route::delete('wishlist-items/{wishlistItem}/purchase', [WishlistItemPurchaseController::class, 'destroy'])->name('wishlist-items.purchase.destroy');
     Route::post('wishlist-items/{wishlistItem}/purchase/confirm', [ReservationConfirmationController::class, 'store'])->name('wishlist-items.purchase.confirm');
+    Route::put('wishlist-items/{wishlistItem}/purchase/tracking', [ShipmentTrackingController::class, 'update'])->name('wishlist-items.purchase.tracking.update');
+    Route::delete('wishlist-items/{wishlistItem}/purchase/tracking', [ShipmentTrackingController::class, 'destroy'])->name('wishlist-items.purchase.tracking.destroy');
 
     Route::get('wishlists/{user}', [WishlistController::class, 'show'])->name('wishlists.show');
 
